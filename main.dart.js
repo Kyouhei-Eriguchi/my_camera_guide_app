@@ -6528,9 +6528,8 @@ l4:function l4(){},
 at9(a,b){var s={}
 s.type=b
 return new self.Blob(a,s)},
-akx(a,b){var s=document.createElement("canvas")
-s.width=b
-s.height=a
+akx(){var s=document.createElement("canvas")
+s.toString
 return s},
 ayG(a,b){if(t.Si.b(b))if(b.parentNode===a){a.removeChild(b).toString
 return!0}return!1},
@@ -70367,8 +70366,10 @@ g=B.c.aq(j/b2)
 if(g>i){g=i
 h=B.c.aq(i*b2)}f=B.c.aq((j-h)/2)
 e=B.c.aq((i-g)/2)
-a7=h
-d=A.akx(g,a7)
+a3=A.akx()
+a3.width=h
+a3.height=g
+d=a3
 a7=d.getContext("2d")
 a7.toString
 c=a7
@@ -70379,8 +70380,10 @@ a0=B.c.aq(i*b2)
 if(a0>j){a0=j
 a=B.c.aq(j/b2)}a1=B.c.aq((j-a0)/2)
 a2=B.c.aq((i-a)/2)
-a7=a0
-a3=A.akx(a,a7)
+d=A.akx()
+d.width=a0
+d.height=a
+a3=d
 a7=a3.getContext("2d")
 a7.toString
 a4=a7

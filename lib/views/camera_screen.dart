@@ -68,7 +68,6 @@ class _CameraScreenState extends State<CameraScreen> {
       );
     }
 
-    // 画面のサイズを取得
     final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -78,7 +77,7 @@ class _CameraScreenState extends State<CameraScreen> {
         bottom: false,
         child: Stack(
           children: [
-            // 【1】 カメラ映像（Webで飛び出さないようにサイズを明示的に指定）
+            // 【1】 カメラ映像
             Positioned.fill(
               child: OverflowBox(
                 alignment: Alignment.center,
@@ -93,9 +92,9 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 【2】 なぞり書きガイド（CustomPaintも最前面に強制配置）
+            // 【2】 なぞり書きガイド
             Positioned.fill(
-              child: IgnorePointer( // ガイドがタップイベントを邪魔しないように
+              child: IgnorePointer(
                 child: CustomPaint(
                   painter: GuidePainter(
                     shapeType: widget.theme.designGuide['shape_type'] ?? 'default',
@@ -106,103 +105,109 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 【3】 独立した閉じるボタン（左上）
+            // 🌟🌟🌟 【3】 画面上部：タイトルと解説メッセージをまとめて配置 🌟🌟🌟
             Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
+              top: MediaQuery.of(context).padding.top + 16, // ノッチ（画面の切り欠き）の下辺りから開始
               left: 16,
-              child: CircleAvatar(
-                backgroundColor: Colors.black.withOpacity(0.5),
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
+              right: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // タイトル行（戻るボタンと並べる）
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.black.withOpacity(0.6),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            widget.theme.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12), // タイトルとメッセージの隙間
+
+                  // 解説メッセージ（上部の空きスペースに配置！）
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Text(
+                      widget.theme.message,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            // 【4】 完全に最前面に固定した、最下部のUIエリア
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  bottom: MediaQuery.of(context).padding.bottom + 24,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end, // 下詰めに固定
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 解説メッセージ枠
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.85), // 映像に負けないようにさらに濃く
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white24, width: 1),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.theme.title,
-                            style: const TextStyle(
-                              color: Colors.greenAccent, 
-                              fontWeight: FontWeight.bold, 
-                              fontSize: 14
-                            ),
+            // 🌟🌟🌟 【4】 画面下部：シャッターボタンのみですっきり配置 🌟🌟🌟
+            Positioned(
+              bottom: MediaQuery.of(context).padding.bottom + 32,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () async {
+                    try {
+                      await _controller!.takePicture();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('バシッと型が決まりました！'),
+                            backgroundColor: Colors.green,
+                            behavior: SnackBarBehavior.floating,
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            widget.theme.message,
-                            style: const TextStyle(
-                              color: Colors.white, 
-                              fontSize: 13, 
-                              height: 1.4
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20), // メッセージとシャッターの間の空間をしっかり確保
-
-                    // シャッターボタン
-                    GestureDetector(
-                      onTap: () async {
-                        try {
-                          await _controller!.takePicture();
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('バシッと型が決まりました！'),
-                                backgroundColor: Colors.green,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          debugPrint('撮影エラー: $e');
-                        }
-                      },
-                      child: Container(
-                        width: 76,
-                        height: 76,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.black, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black54, 
-                              blurRadius: 8, 
-                              offset: const Offset(0, 3)
-                            ),
-                          ],
+                        );
+                      }
+                    } catch (e) {
+                      debugPrint('撮影エラー: $e');
+                    }
+                  },
+                  child: Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black54,
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

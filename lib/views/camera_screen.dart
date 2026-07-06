@@ -230,7 +230,7 @@ class _CameraScreenState extends State<CameraScreen> {
               top: MediaQuery.of(context).padding.top + 16,
               left: MediaQuery.of(context).padding.left + 16,
               // 🌟横向き時は右側にボタンが来るため、メッセージ等が被らないよう右側の余白を大きく確保する
-              right: isCurrentlyLandscape ? 120 : 16,
+              right: isCurrentlyLandscape ? 140 : 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -330,21 +330,22 @@ class _CameraScreenState extends State<CameraScreen> {
             ),
 
             // 【4】 🌟🌟🌟 シャッターボタン（画面の向きに合わせて完全に独立させて配置） 🌟🌟🌟
+            // 🌟 タップ領域が潰れないよう、Positioned自体に明確なサイズ（120px）を与えて最前面に配置します。
             isCurrentlyLandscape
                 ? Positioned(
-                    // 🌟 横向きなら画面の右端（ライトニングやType-Cの端子・ケーブル側）中央に配置
-                    right: MediaQuery.of(context).padding.right + 24,
+                    right: MediaQuery.of(context).padding.right + 12,
                     top: 0,
                     bottom: 0,
+                    width: 120, 
                     child: Center(
                       child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
                     ),
                   )
                 : Positioned(
-                    // 縦向きなら画面の下部に配置
-                    bottom: MediaQuery.of(context).padding.bottom + 32,
+                    bottom: MediaQuery.of(context).padding.bottom + 24,
                     left: 0,
                     right: 0,
+                    height: 120, 
                     child: Center(
                       child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
                     ),
@@ -381,19 +382,25 @@ class _CameraScreenState extends State<CameraScreen> {
         }
       },
       child: Container(
-        width: 76,
-        height: 76,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.black, width: 3),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black54,
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
+        width: 80,
+        height: 80,
+        alignment: Alignment.center,
+        color: Colors.transparent, // タップ可能領域を広げるための透明色
+        child: Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.9),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.black, width: 3),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black54,
+                blurRadius: 8,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
         ),
       ),
     );

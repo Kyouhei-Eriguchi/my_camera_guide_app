@@ -25,18 +25,36 @@ class _CameraScreenState extends State<CameraScreen> {
     _initializeCamera();
   }
 
+  // 🌟🌟🌟 【修正】超広角レンズを避けて「標準等倍レンズ」を強制選択するロジック 🌟🌟🌟
   Future<void> _initializeCamera() async {
     try {
       _cameras = await availableCameras();
       
       if (_cameras != null && _cameras!.isNotEmpty) {
-        final backCamera = _cameras!.firstWhere(
-          (camera) => camera.lensDirection == CameraLensDirection.back,
-          orElse: () => _cameras!.first,
-        );
+        // 1. まず背面カメラだけをすべて集める
+        final backCameras = _cameras!.where(
+          (camera) => camera.lensDirection == CameraLensDirection.back
+        ).toList();
 
+        CameraDescription selectedCamera;
+
+        if (backCameras.isNotEmpty) {
+          // 複数カメラがある場合、超広角（wide / ultrawide）という名前を含まない「標準レンズ」を探す
+          if (backCameras.length > 1) {
+            selectedCamera = backCameras.firstWhere(
+              (c) => !c.name.toLowerCase().contains('wide') && !c.name.toLowerCase().contains('ultrawide'),
+              orElse: () => backCameras[1], // 見つからなければ2番目（標準の可能性高）を選択
+            );
+          } else {
+            selectedCamera = backCameras.first;
+          }
+        } else {
+          selectedCamera = _cameras!.first;
+        }
+
+        // 2. 決定した標準カメラを最高解像度（max）で起動
         _controller = CameraController(
-          backCamera,
+          selectedCamera,
           ResolutionPreset.max,
           enableAudio: false,
         );
@@ -53,7 +71,7 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  // 🌟🌟🌟 【新設】Webブラウザに保存先を選ばせてダウンロードさせる関数 🌟🌟🌟
+  // 🌟🌟🌟 【残存】Webブラウザに保存先を選ばせてダウンロードさせる関数 🌟🌟🌟
   Future<void> _saveImageWeb(XFile file) async {
     try {
       // 1. 撮影された画像データをバイト配列（デジタルデータ）として読み込む
@@ -135,7 +153,7 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 【3】 画面上部：タイトルと解説メッセージ
+            // 【3】 画面上部：タイトルと解説メッセージ（位置OK判定済み）
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
               left: 16,
@@ -196,7 +214,7 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 【4】 画面下部：シャッターボタン
+            // 【4】 画面下部：シャッターボタン（ポツンと独立）
             Positioned(
               bottom: MediaQuery.of(context).padding.bottom + 32,
               left: 0,
@@ -208,7 +226,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       // ① パシャリと撮影
                       final XFile file = await _controller!.takePicture();
                       
-                      // ② 🌟新設した保存関数を呼び出す
+                      // ② Web保存関数を呼び出し（保存先ポップアップを誘導）
                       await _saveImageWeb(file);
                       
                       if (mounted) {

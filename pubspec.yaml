@@ -38,6 +38,7 @@ dependencies:
   # 🌟【追記】カメラ表示とセンサー連動に必要な公式プラグインを追加
   camera: ^0.10.6
   sensors_plus: ^6.1.1
+  universal_html: ^2.3.0
 
 dev_dependencies:
   flutter_test:

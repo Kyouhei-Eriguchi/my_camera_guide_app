@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:universal_html/html.dart' as html; // 🌟 Web保存用のパッケージ
+import 'dart:typed_data';
 import '../../models/theme_model.dart';
 import 'widgets/guide_painter.dart';
 
@@ -48,6 +50,34 @@ class _CameraScreenState extends State<CameraScreen> {
       }
     } catch (e) {
       debugPrint('カメラの初期化エラー: $e');
+    }
+  }
+
+  // 🌟🌟🌟 【新設】Webブラウザに保存先を選ばせてダウンロードさせる関数 🌟🌟🌟
+  Future<void> _saveImageWeb(XFile file) async {
+    try {
+      // 1. 撮影された画像データをバイト配列（デジタルデータ）として読み込む
+      final Uint8List imageBytes = await file.readAsBytes();
+
+      // 2. ブラウザが理解できるデータ（Blob）に変換する
+      final blob = html.Blob([imageBytes], 'image/jpeg');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      // 3. ブラウザの裏側で「見えないダウンロードリンク」を生成する
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute("download", "guide_photo_${DateTime.now().millisecondsSinceEpoch}.jpg")
+        ..style.display = 'none';
+      
+      html.document.body?.children.add(anchor);
+
+      // 4. 自動でそのリンクをクリックさせることで、スマホの「どこに保存しますか？」を引き出す
+      anchor.click();
+
+      // 5. 後片付け
+      html.document.body?.children.remove(anchor);
+      html.Url.revokeObjectUrl(url);
+    } catch (e) {
+      debugPrint('Web保存エラー: $e');
     }
   }
 
@@ -105,16 +135,15 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 🌟🌟🌟 【3】 画面上部：タイトルと解説メッセージをまとめて配置 🌟🌟🌟
+            // 【3】 画面上部：タイトルと解説メッセージ
             Positioned(
-              top: MediaQuery.of(context).padding.top + 16, // ノッチ（画面の切り欠き）の下辺りから開始
+              top: MediaQuery.of(context).padding.top + 16,
               left: 16,
               right: 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // タイトル行（戻るボタンと並べる）
                   Row(
                     children: [
                       CircleAvatar(
@@ -145,9 +174,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12), // タイトルとメッセージの隙間
-
-                  // 解説メッセージ（上部の空きスペースに配置！）
+                  const SizedBox(height: 12),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -169,7 +196,7 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 🌟🌟🌟 【4】 画面下部：シャッターボタンのみですっきり配置 🌟🌟🌟
+            // 【4】 画面下部：シャッターボタン
             Positioned(
               bottom: MediaQuery.of(context).padding.bottom + 32,
               left: 0,
@@ -178,11 +205,16 @@ class _CameraScreenState extends State<CameraScreen> {
                 child: GestureDetector(
                   onTap: () async {
                     try {
-                      await _controller!.takePicture();
+                      // ① パシャリと撮影
+                      final XFile file = await _controller!.takePicture();
+                      
+                      // ② 🌟新設した保存関数を呼び出す
+                      await _saveImageWeb(file);
+                      
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('バシッと型が決まりました！'),
+                            content: Text('撮影完了！保存先を確認してください。'),
                             backgroundColor: Colors.green,
                             behavior: SnackBarBehavior.floating,
                           ),

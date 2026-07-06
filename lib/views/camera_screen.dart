@@ -63,131 +63,151 @@ class _CameraScreenState extends State<CameraScreen> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(color: Colors.green),
-              SizedBox(height: 16),
-              Text('カメラを起動中...', style: TextStyle(color: Colors.white, fontSize: 14)),
-            ],
-          ),
+          child: CircularProgressIndicator(color: Colors.green),
         ),
       );
     }
 
+    // 画面のサイズを取得
+    final screenSize = MediaQuery.of(context).size;
+
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // 【レイヤー1】 全面のカメラプレビュー映像
-          Positioned.fill(
-            child: AspectRatio(
-              aspectRatio: _controller!.value.aspectRatio,
-              child: CameraPreview(_controller!),
-            ),
-          ),
-
-          // 【レイヤー2】 「習字のなぞり線」を中央にオーバーレイ
-          Positioned.fill(
-            child: CustomPaint(
-              painter: GuidePainter(
-                shapeType: widget.theme.designGuide['shape_type'] ?? 'default',
-                shapeParams: widget.theme.designGuide['shape_params'] ?? {},
-                isHorizontal: false, // 将来的にセンサー連動
-              ),
-            ),
-          ),
-
-          // 🌟🌟🌟 【レイヤー3】 新・UIレイアウト（重なり解消） 🌟🌟🌟
-
-          // 【修正点1】 メッセージボードを左上に配置（ガイドの邪魔をしない）
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16, // ステータスバーの下
-            left: 16,
-            right: 80, // 右側に閉じるボタン用のスペースを開ける
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    widget.theme.title,
-                    style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.theme.message,
-                    style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 【修正点2】 閉じるボタンを右上（メッセージの横）に独立して配置
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            right: 16,
-            child: CircleAvatar(
-              backgroundColor: Colors.black.withOpacity(0.5),
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white), // アイコンを「close」に変更
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ),
-
-          // 【修正点3】 シャッターボタンは一番下に配置（中央は開ける）
-          Positioned(
-            bottom: MediaQuery.of(context).padding.bottom + 32, // ナビゲーションバーの上
-            left: 0,
-            right: 0,
-            child: Center(
-              child: GestureDetector(
-                onTap: () async {
-                  try {
-                    // シャッターを切って写真を一時保存（※Web版ではメモリ上に存在）
-                    final XFile file = await _controller!.takePicture();
-                    
-                    // 🌟🌟🌟 【重要：写真保存の解決策】 🌟🌟🌟
-                    // ここでWebブラウザに「写真データをダウンロードさせる」処理を追加します。
-                    // 現状は保存されませんが、本番ではここのロジックを強化します。
-                    
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('バシッと型が決まりました！あとはお好みでレタッチしてね！'),
-                          backgroundColor: Colors.green,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    debugPrint('撮影エラー: $e');
-                  }
-                },
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 2),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black26, blurRadius: 10, offset: const Offset(0, 4)),
-                    ],
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Stack(
+          children: [
+            // 【1】 カメラ映像（Webで飛び出さないようにサイズを明示的に指定）
+            Positioned.fill(
+              child: OverflowBox(
+                alignment: Alignment.center,
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: screenSize.width,
+                    height: screenSize.width * _controller!.value.aspectRatio,
+                    child: CameraPreview(_controller!),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+
+            // 【2】 なぞり書きガイド（CustomPaintも最前面に強制配置）
+            Positioned.fill(
+              child: IgnorePointer( // ガイドがタップイベントを邪魔しないように
+                child: CustomPaint(
+                  painter: GuidePainter(
+                    shapeType: widget.theme.designGuide['shape_type'] ?? 'default',
+                    shapeParams: widget.theme.designGuide['shape_params'] ?? {},
+                    isHorizontal: false,
+                  ),
+                ),
+              ),
+            ),
+
+            // 【3】 独立した閉じるボタン（左上）
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              left: 16,
+              child: CircleAvatar(
+                backgroundColor: Colors.black.withOpacity(0.5),
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ),
+
+            // 【4】 完全に最前面に固定した、最下部のUIエリア
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  bottom: MediaQuery.of(context).padding.bottom + 24,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end, // 下詰めに固定
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 解説メッセージ枠
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.85), // 映像に負けないようにさらに濃く
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white24, width: 1),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.theme.title,
+                            style: const TextStyle(
+                              color: Colors.greenAccent, 
+                              fontWeight: FontWeight.bold, 
+                              fontSize: 14
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.theme.message,
+                            style: const TextStyle(
+                              color: Colors.white, 
+                              fontSize: 13, 
+                              height: 1.4
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20), // メッセージとシャッターの間の空間をしっかり確保
+
+                    // シャッターボタン
+                    GestureDetector(
+                      onTap: () async {
+                        try {
+                          await _controller!.takePicture();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('バシッと型が決まりました！'),
+                                backgroundColor: Colors.green,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          debugPrint('撮影エラー: $e');
+                        }
+                      },
+                      child: Container(
+                        width: 76,
+                        height: 76,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black54, 
+                              blurRadius: 8, 
+                              offset: const Offset(0, 3)
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

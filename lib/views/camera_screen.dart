@@ -96,7 +96,10 @@ class _CameraScreenState extends State<CameraScreen> {
         int startX = ((imgW - cropW) / 2).round();
         int startY = ((imgH - cropH) / 2).round();
 
-        final html.CanvasElement canvas = html.CanvasElement(width: cropW, height: cropH);
+        // 🌟【エラー対処】引数での指定を廃止し、カスケード演算子(..)でプロパティを設定
+        final html.CanvasElement canvas = html.CanvasElement()
+          ..width = cropW
+          ..height = cropH;
         final html.CanvasRenderingContext2D ctx = canvas.context2D;
         ctx.drawImageScaledFromSource(img, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
 
@@ -115,8 +118,10 @@ class _CameraScreenState extends State<CameraScreen> {
         int startX = ((imgW - srcW) / 2).round();
         int startY = ((imgH - srcH) / 2).round();
 
-        // 🌟画像自体の枠を「縦長（幅が狭く、高さが高い）」にするため、枠のサイズを逆転させずに正しく定義
-        final html.CanvasElement canvas = html.CanvasElement(width: srcW, height: srcH);
+        // 🌟【エラー対処】画像自体の枠を「縦長」にするため、カスケード演算子(..)で幅と高さを定義
+        final html.CanvasElement canvas = html.CanvasElement()
+          ..width = srcW
+          ..height = srcH;
         final html.CanvasRenderingContext2D ctx = canvas.context2D;
 
         // Canvasの中心を軸にして回転させる

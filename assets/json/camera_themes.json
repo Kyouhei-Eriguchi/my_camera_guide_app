@@ -1,0 +1,59 @@
+[
+  {
+    "id": "food_zen_standard",
+    "initial_power": 1248,
+    "purpose_what": "料理（お膳・定食・テーブル全体）",
+    "purpose_how": "テーブルの上の豪華さや全体のボリューム感をきれいに残したい！",
+    "title": "お膳の上の豪華さ（真上から俯瞰）",
+    "message": "カメラを料理の真上に！スマホを完全に水平にして、お膳全体がバランスよく収まるように引いて撮ろう。影が入らないように位置を調整してね。",
+    "conditions": {
+      "category": ["料理"],
+      "location": "indoor",
+      "brightness": "bright",
+      "orientation": "vertical",
+      "angle": "high_angle"
+    },
+    "design_guide": {
+      "shape_type": "circle",
+      "shape_params": { "size_ratio": 0.7 }
+    }
+  },
+  {
+    "id": "family_smile_standard",
+    "initial_power": 2450,
+    "purpose_what": "家族・子ども・友達（複数人）",
+    "purpose_how": "直立不動じゃなくて、みんなの楽しそうな空気感や仲の良さを残したい！",
+    "title": "笑顔弾ける！仲良しローアングル",
+    "message": "カメラを思い切っておへその位置まで下げて、少し見上げるように構えて！みんなにはカメラじゃなくて、お互いの顔を見合って爆笑してもらうのがコツです！",
+    "conditions": {
+      "category": ["人物"],
+      "location": "any",
+      "brightness": "any",
+      "orientation": "horizontal",
+      "angle": "low_angle"
+    },
+    "design_guide": {
+      "shape_type": "center_cross",
+      "shape_params": {}
+    }
+  },
+  {
+    "id": "food_shizuru_arrange",
+    "initial_power": 85,
+    "purpose_what": "料理（お肉・ハンバーグ・ラーメン等）",
+    "purpose_how": "あえて定番を崩して、お肉のジューシーさやツヤを主役にドアップで撮りたい！",
+    "title": "極上のシズル感（あえて端に寄せる）",
+    "message": "あと10cm近づいて！一番ツヤが出ているお肉の表面にピントを合わせよう。画面の右下のターゲットに主役を重ねて、左側に大胆な余白を作るのがプロの技！",
+    "conditions": {
+      "category": ["料理"],
+      "location": "indoor",
+      "brightness": "any",
+      "orientation": "vertical",
+      "angle": "diagonal_45"
+    },
+    "design_guide": {
+      "shape_type": "thirds_target",
+      "shape_params": { "focus_zone": "bottom_right" }
+    }
+  }
+]

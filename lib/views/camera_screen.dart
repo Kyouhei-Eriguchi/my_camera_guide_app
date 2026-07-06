@@ -69,7 +69,7 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  // 🌟 画面の向き（縦・横）に合わせて画像を中央で切り抜く関数
+  // 🌟🌟🌟 【修正】縦・横それぞれの撮影時、画面の見た目通りの向き・比率で保存するクロップ関数 🌟🌟🌟
   Future<void> _saveAndCropImageWeb(XFile file, double screenAspectRatio, bool isLandscape) async {
     try {
       final Uint8List imageBytes = await file.readAsBytes();
@@ -80,27 +80,57 @@ class _CameraScreenState extends State<CameraScreen> {
       img.src = originalUrl;
       await img.onLoad.first;
 
+      // Webカメラの生の出力解像度（通常はデバイスの向きに関わらず常に横長 imgW > imgH）
       final int imgW = img.naturalWidth;
       final int imgH = img.naturalHeight;
 
-      // 画面が横向きならそのままの比率、縦向きなら逆数をターゲットにする
-      double targetRatio = isLandscape ? screenAspectRatio : (1 / screenAspectRatio);
-      
-      int cropW = imgW;
-      int cropH = (imgW / targetRatio).round();
+      int cropW, cropH;
 
-      if (cropH > imgH) {
+      if (isLandscape) {
+        // 【横向き撮影時】生データと同じ横長比率（screenAspectRatio）で切り抜く
+        cropW = imgW;
+        cropH = (imgW / screenAspectRatio).round();
+        if (cropH > imgH) {
+          cropH = imgH;
+          cropW = (imgH * screenAspectRatio).round();
+        }
+      } else {
+        // 【縦向き撮影時】生データの中心から、縦長画面の比率（1 / screenAspectRatio）で切り抜く
         cropH = imgH;
-        cropW = (imgH * targetRatio).round();
+        cropW = (imgH * screenAspectRatio).round();
+        if (cropW > imgW) {
+          cropW = imgW;
+          cropH = (imgW / screenAspectRatio).round();
+        }
       }
 
       int startX = ((imgW - cropW) / 2).round();
       int startY = ((imgH - cropH) / 2).round();
 
+      // キャンバスの初期設定
       final html.CanvasElement canvas = html.CanvasElement(width: cropW, height: cropH);
       final html.CanvasRenderingContext2D ctx = canvas.context2D;
       
-      ctx.drawImageScaledFromSource(img, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+      if (!isLandscape) {
+        // 🌟 スマホ縦向きの場合は、横長の生データを縦長写真に変換するため、Canvasごと90度回転させる
+        canvas.width = cropH; // 縦向き出力にするため幅と高さを反転
+        canvas.height = cropW;
+        
+        // 🌟 【赤波線修正箇所】
+        // universal_html の canvas.width/height は Null許容型 (int?) の場合があるため、
+        // 明示的に `!` で非Null保証を行い、double型として安全に除算を行います。
+        ctx.translate(canvas.width! / 2.0, canvas.height! / 2.0);
+        ctx.rotate(90 * 3.1415926535 / 180); // 90度時計回りに回転
+        
+        ctx.drawImageScaledFromSource(
+          img, 
+          startX, startY, cropW, cropH, 
+          -cropW / 2, -cropH / 2, cropW, cropH
+        );
+      } else {
+        // 横向き撮影時はそのまま保存
+        ctx.drawImageScaledFromSource(img, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+      }
 
       final String dataUrl = canvas.toDataUrl('image/jpeg', 0.9);
       
@@ -118,7 +148,7 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  // 🌟 タイトルやメッセージから、縦向き撮影・横向き撮影のどちらを推奨しているかを判定するロジック
+  // タイトルやメッセージから、縦向き撮影・横向き撮影のどちらを推奨しているかを判定するロジック
   bool _isRecommendLandscape() {
     final text = '${widget.theme.title} ${widget.theme.message}'.toLowerCase();
     if (text.contains('俯瞰') || text.contains('真上') || text.contains('縦')) {
@@ -160,13 +190,10 @@ class _CameraScreenState extends State<CameraScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        top: false,
-        bottom: false,
-        left: false,
-        right: false,
+        top: false, bottom: false, left: false, right: false,
         child: Stack(
           children: [
-            // 【1】 カメラ映像（FittedBoxを最適化し、縦でも横でも画面全体を黒帯なしで覆い尽くします）
+            // 【1】 カメラ映像（縦でも横でも画面全体を黒帯なしで覆い尽くします）
             Positioned.fill(
               child: OverflowBox(
                 alignment: Alignment.center,
@@ -202,7 +229,8 @@ class _CameraScreenState extends State<CameraScreen> {
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
               left: MediaQuery.of(context).padding.left + 16,
-              right: MediaQuery.of(context).padding.right + 16,
+              // 🌟横向き時は右側にボタンが来るため、メッセージ等が被らないよう右側の余白を大きく確保する
+              right: isCurrentlyLandscape ? 120 : 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -239,7 +267,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   ),
                   const SizedBox(height: 8),
                   
-                  // 🌟🌟🌟 カメラの推奨向き（縦 or 横）を表示するナビゲーションバッジ 🌟🌟🌟
+                  // カメラの推奨向き（縦 or 横）を表示するナビゲーションバッジ
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
@@ -272,7 +300,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // 解説メッセージ（横向き時に画面を塞ぎすぎないよう、最大高さを少しセーブ）
+                  // 解説メッセージ（横向き時に画面を塞ぎすぎないよう、最大高さをセーブ）
                   ConstrainedBox(
                     constraints: BoxConstraints(
                       maxHeight: isCurrentlyLandscape ? 60 : 120,
@@ -292,7 +320,7 @@ class _CameraScreenState extends State<CameraScreen> {
                             color: Colors.white,
                             fontSize: 12,
                             height: 1.4,
-                      ),
+                          ),
                         ),
                       ),
                     ),
@@ -301,54 +329,69 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 【4】 画面最下部：シャッターボタン（画面の回転状態に合わせて、常に確実にタップできる絶対座標へ配置）
-            Positioned(
-              bottom: isCurrentlyLandscape 
-                  ? 20 
-                  : (MediaQuery.of(context).padding.bottom + 32),
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: () async {
-                    try {
-                      // ① パシャリと撮影
-                      final XFile file = await _controller!.takePicture();
-                      
-                      // ② 画面比率と回転状態を渡して、自動切り抜き保存を実行！
-                      await _saveAndCropImageWeb(file, screenAspectRatio, isCurrentlyLandscape);
-                      
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('撮影完了！画面通りのサイズで保存しました。'),
-                            backgroundColor: Colors.green,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      debugPrint('撮影エラー: $e');
-                    }
-                  },
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black, width: 3),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black54,
-                          blurRadius: 8,
-                          offset: Offset(0, 3),
-                        ),
-                      ],
+            // 【4】 🌟🌟🌟 シャッターボタン（画面の向きに合わせて完全に独立させて配置） 🌟🌟🌟
+            isCurrentlyLandscape
+                ? Positioned(
+                    // 🌟 横向きなら画面の右端（ライトニングやType-Cの端子・ケーブル側）中央に配置
+                    right: MediaQuery.of(context).padding.right + 24,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
+                    ),
+                  )
+                : Positioned(
+                    // 縦向きなら画面の下部に配置
+                    bottom: MediaQuery.of(context).padding.bottom + 32,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
                     ),
                   ),
-                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🌟 タップ判定を確実にするためHitTestBehaviorを適用した共通のシャッターボタンUI
+  Widget _buildShutterButton(BuildContext context, double screenAspectRatio, bool isCurrentlyLandscape) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque, // ボタン周辺の透明部分をタップしても確実に反応させる
+      onTap: () async {
+        try {
+          // ① パシャリと撮影
+          final XFile file = await _controller!.takePicture();
+          
+          // ② 画面比率と回転状態を渡して、自動切り抜き保存を実行！
+          await _saveAndCropImageWeb(file, screenAspectRatio, isCurrentlyLandscape);
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('撮影完了！画面通りのサイズで保存しました。'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
               ),
+            );
+          }
+        } catch (e) {
+          debugPrint('撮影エラー: $e');
+        }
+      },
+      child: Container(
+        width: 76,
+        height: 76,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.black, width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black54,
+              blurRadius: 8,
+              offset: Offset(0, 3),
             ),
           ],
         ),

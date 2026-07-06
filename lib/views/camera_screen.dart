@@ -84,68 +84,71 @@ class _CameraScreenState extends State<CameraScreen> {
       final int imgW = img.naturalWidth;
       final int imgH = img.naturalHeight;
 
-      int cropW, cropH;
-
       if (isLandscape) {
         // 【横向き撮影時】生データと同じ横長比率（screenAspectRatio）で切り抜く
-        cropW = imgW;
-        cropH = (imgW / screenAspectRatio).round();
+        int cropW = imgW;
+        int cropH = (imgW / screenAspectRatio).round();
         if (cropH > imgH) {
           cropH = imgH;
           cropW = (imgH * screenAspectRatio).round();
         }
+
+        int startX = ((imgW - cropW) / 2).round();
+        int startY = ((imgH - cropH) / 2).round();
+
+        final html.CanvasElement canvas = html.CanvasElement(width: cropW, height: cropH);
+        final html.CanvasRenderingContext2D ctx = canvas.context2D;
+        ctx.drawImageScaledFromSource(img, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+
+        final String dataUrl = canvas.toDataUrl('image/jpeg', 0.9);
+        _downloadImageWeb(dataUrl);
       } else {
-        // 【縦向き撮影時】生データの中心から、縦長画面の比率（1 / screenAspectRatio）で切り抜く
-        cropH = imgH;
-        cropW = (imgH * screenAspectRatio).round();
-        if (cropW > imgW) {
-          cropW = imgW;
-          cropH = (imgW / screenAspectRatio).round();
+        // 【縦向き撮影時】最終出力するCanvas自体を「縦長」の枠として定義する
+        // 生の横長データ（imgW x imgH）の「中央の縦長領域」に対応する、回転前のソース切り出しサイズを計算
+        int srcH = imgH;
+        int srcW = (imgH * screenAspectRatio).round();
+        if (srcW > imgW) {
+          srcW = imgW;
+          srcH = (imgW / screenAspectRatio).round();
         }
-      }
 
-      int startX = ((imgW - cropW) / 2).round();
-      int startY = ((imgH - cropH) / 2).round();
+        int startX = ((imgW - srcW) / 2).round();
+        int startY = ((imgH - srcH) / 2).round();
 
-      // キャンバスの初期設定
-      final html.CanvasElement canvas = html.CanvasElement(width: cropW, height: cropH);
-      final html.CanvasRenderingContext2D ctx = canvas.context2D;
-      
-      if (!isLandscape) {
-        // 🌟 スマホ縦向きの場合は、横長の生データを縦長写真に変換するため、Canvasごと90度回転させる
-        canvas.width = cropH; // 縦向き出力にするため幅と高さを反転
-        canvas.height = cropW;
-        
-        // 🌟 【赤波線修正箇所】
-        // universal_html の canvas.width/height は Null許容型 (int?) の場合があるため、
-        // 明示的に `!` で非Null保証を行い、double型として安全に除算を行います。
+        // 🌟画像自体の枠を「縦長（幅が狭く、高さが高い）」にするため、枠のサイズを逆転させずに正しく定義
+        final html.CanvasElement canvas = html.CanvasElement(width: srcW, height: srcH);
+        final html.CanvasRenderingContext2D ctx = canvas.context2D;
+
+        // Canvasの中心を軸にして回転させる
         ctx.translate(canvas.width! / 2.0, canvas.height! / 2.0);
         ctx.rotate(90 * 3.1415926535 / 180); // 90度時計回りに回転
-        
+
+        // 回転後の座標系に合わせて、横長の生データ中央から切り出してはめ込む
         ctx.drawImageScaledFromSource(
           img, 
-          startX, startY, cropW, cropH, 
-          -cropW / 2, -cropH / 2, cropW, cropH
+          startX, startY, srcW, srcH, 
+          -srcH / 2, -srcW / 2, srcH, srcW
         );
-      } else {
-        // 横向き撮影時はそのまま保存
-        ctx.drawImageScaledFromSource(img, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+
+        final String dataUrl = canvas.toDataUrl('image/jpeg', 0.9);
+        _downloadImageWeb(dataUrl);
       }
 
-      final String dataUrl = canvas.toDataUrl('image/jpeg', 0.9);
-      
-      final anchor = html.AnchorElement(href: dataUrl)
-        ..setAttribute("download", "guide_photo_${DateTime.now().millisecondsSinceEpoch}.jpg")
-        ..style.display = 'none';
-      
-      html.document.body?.children.add(anchor);
-      anchor.click();
-
-      html.document.body?.children.remove(anchor);
       html.Url.revokeObjectUrl(originalUrl);
     } catch (e) {
       debugPrint('Webクロップ・保存エラー: $e');
     }
+  }
+
+  // Web用のダウンロード処理共通化
+  void _downloadImageWeb(String dataUrl) {
+    final anchor = html.AnchorElement(href: dataUrl)
+      ..setAttribute("download", "guide_photo_${DateTime.now().millisecondsSinceEpoch}.jpg")
+      ..style.display = 'none';
+    
+    html.document.body?.children.add(anchor);
+    anchor.click();
+    html.document.body?.children.remove(anchor);
   }
 
   // タイトルやメッセージから、縦向き撮影・横向き撮影のどちらを推奨しているかを判定するロジック
@@ -178,7 +181,6 @@ class _CameraScreenState extends State<CameraScreen> {
     }
 
     final screenSize = MediaQuery.of(context).size;
-    // 🌟 現在のデバイスの画面が横向きかどうかをリアルタイム判定
     final bool isCurrentlyLandscape = screenSize.width > screenSize.height;
     final double screenAspectRatio = screenSize.width / screenSize.height;
 
@@ -187,27 +189,29 @@ class _CameraScreenState extends State<CameraScreen> {
     // 現在の状態が推奨通りになっているか
     final bool isMatchingOrientation = isCurrentlyLandscape == recommendLandscape;
 
+    // 🌟🌟🌟 【修正】画面が寄りすぎる（過剰にズームされる）問題を解決するスケール計算 🌟🌟🌟
+    final double cameraAspectRatio = _controller!.value.aspectRatio;
+    double scale = 1.0;
+    if (isCurrentlyLandscape) {
+      scale = screenSize.width / (screenSize.height * cameraAspectRatio);
+    } else {
+      scale = screenSize.height / (screenSize.width * cameraAspectRatio);
+    }
+    if (scale < 1.0) scale = 1.0 / scale;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         top: false, bottom: false, left: false, right: false,
         child: Stack(
+          fit: StackFit.expand,
           children: [
-            // 【1】 カメラ映像（縦でも横でも画面全体を黒帯なしで覆い尽くします）
+            // 【1】 カメラ映像（過剰なクロップ・寄りを防ぎつつ画面全体に表示）
             Positioned.fill(
-              child: OverflowBox(
-                alignment: Alignment.center,
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: isCurrentlyLandscape 
-                        ? screenSize.height * _controller!.value.aspectRatio 
-                        : screenSize.width,
-                    height: isCurrentlyLandscape 
-                        ? screenSize.height 
-                        : screenSize.width * _controller!.value.aspectRatio,
-                    child: CameraPreview(_controller!),
-                  ),
+              child: Center(
+                child: Transform.scale(
+                  scale: scale,
+                  child: CameraPreview(_controller!),
                 ),
               ),
             ),
@@ -229,8 +233,8 @@ class _CameraScreenState extends State<CameraScreen> {
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
               left: MediaQuery.of(context).padding.left + 16,
-              // 🌟横向き時は右側にボタンが来るため、メッセージ等が被らないよう右側の余白を大きく確保する
-              right: isCurrentlyLandscape ? 140 : 16,
+              // 🌟横向き時に右側のシャッター判定領域（幅140px）と絶対にかぶらないよう右余白を160pxに拡張
+              right: isCurrentlyLandscape ? 160 : 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -329,14 +333,13 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 【4】 🌟🌟🌟 シャッターボタン（画面の向きに合わせて完全に独立させて配置） 🌟🌟🌟
-            // 🌟 タップ領域が潰れないよう、Positioned自体に明確なサイズ（120px）を与えて最前面に配置します。
+            // 【4】 🌟🌟🌟 シャッターボタン（他のあらゆるUIレイヤーより最前面に配置してタップを保証） 🌟🌟🌟
             isCurrentlyLandscape
                 ? Positioned(
                     right: MediaQuery.of(context).padding.right + 12,
                     top: 0,
                     bottom: 0,
-                    width: 120, 
+                    width: 140, // 判定エリアを十分に確保
                     child: Center(
                       child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
                     ),
@@ -345,7 +348,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     bottom: MediaQuery.of(context).padding.bottom + 24,
                     left: 0,
                     right: 0,
-                    height: 120, 
+                    height: 140, // 判定エリアを十分に確保
                     child: Center(
                       child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
                     ),
@@ -382,8 +385,8 @@ class _CameraScreenState extends State<CameraScreen> {
         }
       },
       child: Container(
-        width: 80,
-        height: 80,
+        width: 90,
+        height: 90,
         alignment: Alignment.center,
         color: Colors.transparent, // タップ可能領域を広げるための透明色
         child: Container(

@@ -69,8 +69,8 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  // 🌟🌟🌟 【修正】縦・横それぞれの撮影時、画面の見た目通りの向き・比率で保存するクロップ関数 🌟🌟🌟
-  Future<void> _saveAndCropImageWeb(XFile file, double screenAspectRatio, bool isLandscape) async {
+  // 🌟🌟🌟 【大幅改善】画面上のプレビュー拡大率（previewScale）を考慮して「見た目通り」に切り抜く関数 🌟🌟🌟
+  Future<void> _saveAndCropImageWeb(XFile file, double screenAspectRatio, bool isLandscape, double previewScale) async {
     try {
       final Uint8List imageBytes = await file.readAsBytes();
       final blob = html.Blob([imageBytes], 'image/jpeg');
@@ -80,14 +80,16 @@ class _CameraScreenState extends State<CameraScreen> {
       img.src = originalUrl;
       await img.onLoad.first;
 
-      // Webカメラの生の出力解像度（通常はデバイスの向きに関わらず常に横長 imgW > imgH）
+      // Webカメラの生の出力解像度（常に横長 imgW > imgH）
       final int imgW = img.naturalWidth;
       final int imgH = img.naturalHeight;
 
       if (isLandscape) {
-        // 【横向き撮影時】生データと同じ横長比率（screenAspectRatio）で切り抜く
-        int cropW = imgW;
-        int cropH = (imgW / screenAspectRatio).round();
+        // 【横向き撮影時】
+        // 画面で見えている範囲のサイズ（拡大スケールを反映）
+        int cropW = (imgW / previewScale).round();
+        int cropH = (cropW / screenAspectRatio).round();
+        
         if (cropH > imgH) {
           cropH = imgH;
           cropW = (imgH * screenAspectRatio).round();
@@ -96,7 +98,6 @@ class _CameraScreenState extends State<CameraScreen> {
         int startX = ((imgW - cropW) / 2).round();
         int startY = ((imgH - cropH) / 2).round();
 
-        // 🌟【エラー対処】引数での指定を廃止し、カスケード演算子(..)でプロパティを設定
         final html.CanvasElement canvas = html.CanvasElement()
           ..width = cropW
           ..height = cropH;
@@ -106,10 +107,11 @@ class _CameraScreenState extends State<CameraScreen> {
         final String dataUrl = canvas.toDataUrl('image/jpeg', 0.9);
         _downloadImageWeb(dataUrl);
       } else {
-        // 【縦向き撮影時】最終出力するCanvas自体を「縦長」の枠として定義する
-        // 生の横長データ（imgW x imgH）の「中央の縦長領域」に対応する、回転前のソース切り出しサイズを計算
-        int srcH = imgH;
-        int srcW = (imgH * screenAspectRatio).round();
+        // 【縦向き撮影時】
+        // 画面の拡大スケールを考慮して、生の横長データから「実際に見えている領域」の幅・高さを算出
+        int srcH = (imgH / previewScale).round();
+        int srcW = (srcH * screenAspectRatio).round();
+        
         if (srcW > imgW) {
           srcW = imgW;
           srcH = (imgW / screenAspectRatio).round();
@@ -118,7 +120,6 @@ class _CameraScreenState extends State<CameraScreen> {
         int startX = ((imgW - srcW) / 2).round();
         int startY = ((imgH - srcH) / 2).round();
 
-        // 🌟【エラー対処】画像自体の枠を「縦長」にするため、カスケード演算子(..)で幅と高さを定義
         final html.CanvasElement canvas = html.CanvasElement()
           ..width = srcW
           ..height = srcH;
@@ -128,7 +129,7 @@ class _CameraScreenState extends State<CameraScreen> {
         ctx.translate(canvas.width! / 2.0, canvas.height! / 2.0);
         ctx.rotate(90 * 3.1415926535 / 180); // 90度時計回りに回転
 
-        // 回転後の座標系に合わせて、横長の生データ中央から切り出してはめ込む
+        // 計算したズーム領域から適切に切り出してはめ込む
         ctx.drawImageScaledFromSource(
           img, 
           startX, startY, srcW, srcH, 
@@ -194,7 +195,7 @@ class _CameraScreenState extends State<CameraScreen> {
     // 現在の状態が推奨通りになっているか
     final bool isMatchingOrientation = isCurrentlyLandscape == recommendLandscape;
 
-    // 🌟🌟🌟 【修正】画面が寄りすぎる（過剰にズームされる）問題を解決するスケール計算 🌟🌟🌟
+    // 🌟画面が寄りすぎる（過剰にズームされる）問題を解決するスケール計算
     final double cameraAspectRatio = _controller!.value.aspectRatio;
     double scale = 1.0;
     if (isCurrentlyLandscape) {
@@ -238,7 +239,6 @@ class _CameraScreenState extends State<CameraScreen> {
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
               left: MediaQuery.of(context).padding.left + 16,
-              // 🌟横向き時に右側のシャッター判定領域（幅140px）と絶対にかぶらないよう右余白を160pxに拡張
               right: isCurrentlyLandscape ? 160 : 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,8 +281,8 @@ class _CameraScreenState extends State<CameraScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: isMatchingOrientation 
-                          ? Colors.green.withOpacity(0.85) // 推奨通りの向きなら緑
-                          : Colors.orange.withOpacity(0.85), // 違う向きなら注意を促すオレンジ
+                          ? Colors.green.withOpacity(0.85)
+                          : Colors.orange.withOpacity(0.85),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -309,7 +309,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // 解説メッセージ（横向き時に画面を塞ぎすぎないよう、最大高さをセーブ）
+                  // 解説メッセージ
                   ConstrainedBox(
                     constraints: BoxConstraints(
                       maxHeight: isCurrentlyLandscape ? 60 : 120,
@@ -338,24 +338,24 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-            // 【4】 🌟🌟🌟 シャッターボタン（他のあらゆるUIレイヤーより最前面に配置してタップを保証） 🌟🌟🌟
+            // 【4】 シャッターボタン（計算した `scale` を引数として渡すよう修正）
             isCurrentlyLandscape
                 ? Positioned(
                     right: MediaQuery.of(context).padding.right + 12,
                     top: 0,
                     bottom: 0,
-                    width: 140, // 判定エリアを十分に確保
+                    width: 140,
                     child: Center(
-                      child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
+                      child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape, scale),
                     ),
                   )
                 : Positioned(
                     bottom: MediaQuery.of(context).padding.bottom + 24,
                     left: 0,
                     right: 0,
-                    height: 140, // 判定エリアを十分に確保
+                    height: 140,
                     child: Center(
-                      child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
+                      child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape, scale),
                     ),
                   ),
           ],
@@ -365,16 +365,16 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   // 🌟 タップ判定を確実にするためHitTestBehaviorを適用した共通のシャッターボタンUI
-  Widget _buildShutterButton(BuildContext context, double screenAspectRatio, bool isCurrentlyLandscape) {
+  Widget _buildShutterButton(BuildContext context, double screenAspectRatio, bool isCurrentlyLandscape, double previewScale) {
     return GestureDetector(
-      behavior: HitTestBehavior.opaque, // ボタン周辺の透明部分をタップしても確実に反応させる
+      behavior: HitTestBehavior.opaque,
       onTap: () async {
         try {
           // ① パシャリと撮影
           final XFile file = await _controller!.takePicture();
           
-          // ② 画面比率と回転状態を渡して、自動切り抜き保存を実行！
-          await _saveAndCropImageWeb(file, screenAspectRatio, isCurrentlyLandscape);
+          // ② 画面比率、回転状態、さらに【プレビューのズームスケール倍率】を渡して切り抜き実行！
+          await _saveAndCropImageWeb(file, screenAspectRatio, isCurrentlyLandscape, previewScale);
           
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -393,7 +393,7 @@ class _CameraScreenState extends State<CameraScreen> {
         width: 90,
         height: 90,
         alignment: Alignment.center,
-        color: Colors.transparent, // タップ可能領域を広げるための透明色
+        color: Colors.transparent,
         child: Container(
           width: 72,
           height: 72,

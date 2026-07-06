@@ -125,15 +125,15 @@ class _CameraScreenState extends State<CameraScreen> {
         bottom: false,
         child: Stack(
           children: [
-            // 【1】 カメラ映像
+            // 【1】 🌟カメラ映像（fitを「contain」にして拡大切り抜きを停止、実際の保存データと画角を一致）
             Positioned.fill(
-              child: OverflowBox(
-                alignment: Alignment.center,
+              child: ColoredBox(
+                color: Colors.black,
                 child: FittedBox(
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain, // 🌟ここを contain に変更し、カメラ本来の広角プレビュー全体を画面に収めます
                   child: SizedBox(
-                    width: screenSize.width,
-                    height: screenSize.width * _controller!.value.aspectRatio,
+                    width: _controller!.value.previewSize?.height ?? 1080,
+                    height: _controller!.value.previewSize?.width ?? 1920,
                     child: CameraPreview(_controller!),
                   ),
                 ),

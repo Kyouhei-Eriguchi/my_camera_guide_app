@@ -39,7 +39,9 @@ dependencies:
   camera: ^0.10.6
   sensors_plus: ^6.1.1
   universal_html: ^2.3.0
+  image: ^4.3.0 # 最新の安定版を使用してください
 
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -97,8 +97,8 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  // 🌟🌟🌟 【修正】縦向き撮影時の90度不要回転を防止し、画面の見た目通りに切り出すWeb保存関数 🌟🌟🌟
-  Future<void> _saveAndCropImageWeb(XFile file, double screenAspectRatio, bool isLandscape) async {
+  // 🌟🌟🌟 【修正】厳密な4:3（または3:4）比率で見た目通りに切り抜いて保存するWeb保存関数 🌟🌟🌟
+  Future<void> _saveAndCropImageWeb(XFile file, bool isLandscape) async {
     try {
       final Uint8List imageBytes = await file.readAsBytes();
       final blob = html.Blob([imageBytes], 'image/jpeg');
@@ -108,21 +108,24 @@ class _CameraScreenState extends State<CameraScreen> {
       img.src = originalUrl;
       await img.onLoad.first;
 
-      // Webカメラの生の出力解像度（基本的にブラウザから供給される生データは常に横長 imgW > imgH）
+      // Webカメラの生の出力解像度
       final int imgW = img.naturalWidth;
       final int imgH = img.naturalHeight;
 
       final html.CanvasElement canvas = html.CanvasElement();
       final html.CanvasRenderingContext2D ctx = canvas.context2D;
 
+      // ガイドラインおよびプレビューの仕様に完全追従する「4:3」の固定比率ターゲット
+      final double targetAspectRatio = isLandscape ? (4.0 / 3.0) : (3.0 / 4.0);
+
       if (isLandscape) {
-        // 【横向き撮影時】
+        // 【横向き撮影時】生データから綺麗に中央4:3を切り出す
         int cropW = imgW;
-        int cropH = (cropW / screenAspectRatio).round();
+        int cropH = (cropW / targetAspectRatio).round();
         
         if (cropH > imgH) {
           cropH = imgH;
-          cropW = (imgH * screenAspectRatio).round();
+          cropW = (imgH * targetAspectRatio).round();
         }
 
         int startX = ((imgW - cropW) / 2).round();
@@ -132,22 +135,19 @@ class _CameraScreenState extends State<CameraScreen> {
         canvas.height = cropH;
         ctx.drawImageScaledFromSource(img, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
       } else {
-        // 【縦向き撮影時】
-        // スマホを縦に持っている場合、生データ（横長）の「中央の縦長領域」を抽出し、
-        // 90度余計に回転して傾いてしまう現象を防ぐため、正しい上向き（縦長）のCanvasにマッピングします。
-        double invAspect = 1.0 / screenAspectRatio; // 縦長比率の逆数
+        // 【縦向き撮影時】生データの横長データから「中央の3:4（縦長）領域」を抽出
         int srcH = imgH;
-        int srcW = (srcH / invAspect).round();
+        int srcW = (srcH * targetAspectRatio).round(); // ターゲット比率(3/4)を掛けて縦長幅を算出
         
         if (srcW > imgW) {
           srcW = imgW;
-          srcH = (imgW * invAspect).round();
+          srcH = (imgW / targetAspectRatio).round();
         }
 
         int startX = ((imgW - srcW) / 2).round();
         int startY = ((imgH - srcH) / 2).round();
 
-        // 最終出力される画像サイズ（縦長）
+        // 最終出力される画像サイズ（3:4の縦長形に確定）
         canvas.width = srcW;
         canvas.height = srcH;
 
@@ -204,21 +204,13 @@ class _CameraScreenState extends State<CameraScreen> {
 
     final screenSize = MediaQuery.of(context).size;
     final bool isCurrentlyLandscape = screenSize.width > screenSize.height;
-    final double screenAspectRatio = screenSize.width / screenSize.height;
 
     final bool recommendLandscape = _isRecommendLandscape();
     final bool isMatchingOrientation = isCurrentlyLandscape == recommendLandscape;
 
-    // 🌟🌟🌟 【重要修正】デバイスの回転に合わせてキャンバスのアスペクト比を動的にスイッチ 🌟🌟🌟
-    // Appleの標準デフォルト画角（4:3ベース）を画面の現在の向き（縦・横）に合わせてリアルタイムに変形させます。
-    double cameraAspect = _controller!.value.aspectRatio;
-    
-    // コントローラの生の比率に関わらず、スマホが「横向き」なら横長比率、 「縦向き」なら縦長比率に強制連動
-    if (isCurrentlyLandscape) {
-      if (cameraAspect < 1.0) cameraAspect = 1.0 / cameraAspect; // 必ず1.0以上に（例: 1.333 = 4:3）
-    } else {
-      if (cameraAspect > 1.0) cameraAspect = 1.0 / cameraAspect; // 必ず1.0未満に（例: 0.75 = 3:4）
-    }
+    // 🌟🌟🌟 【重要修正】プレビュー表示も厳格に「4:3」または「3:4」に固定 🌟🌟🌟
+    // 画面いっぱいに間延びさせず、正確な比率のプレビュー枠の中に、お弁当枠やランドマークガイドを表示させます。
+    final double cameraAspect = isCurrentlyLandscape ? (4.0 / 3.0) : (3.0 / 4.0);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -235,7 +227,7 @@ class _CameraScreenState extends State<CameraScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // 【1】 🌟 カメラ映像（デバイス回転時に遅れず追従し、画面いっぱいに表示）
+              // 【1】 🌟 カメラ映像（アスペクト比を厳格に4:3または3:4に固定して中央配置）
               Positioned.fill(
                 child: Center(
                   child: AspectRatio(
@@ -248,14 +240,22 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
               ),
 
-              // 【2】 なぞり書きガイド
+              // 【2】 🌟 新しいマスターJSONの全パラメータ構造を完全に渡すガイドレイヤー 🌟
+              // 4:3に固定された上のCameraPreviewと完全に同じ枠に重なるように配置
               Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: GuidePainter(
-                      shapeType: widget.theme.designGuide['shape_type'] ?? 'default',
-                      shapeParams: widget.theme.designGuide['shape_params'] ?? {},
-                      isHorizontal: isCurrentlyLandscape,
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: cameraAspect,
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: GuidePainter(
+                          // 新しい設計データ（お弁当枠、三分割破線、形状params一式）をそのまま引き渡す
+                          shapeType: widget.theme.designGuide['shape_type'] ?? 'default',
+                          shapeParams: widget.theme.designGuide['shape_params'] ?? {},
+                          isHorizontal: isCurrentlyLandscape,
+                          // 必要に応じて設計データ一式（design_guideオブジェクト全体）をそのまま渡せるように拡張可能に
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -373,7 +373,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       bottom: 0,
                       width: 140,
                       child: Center(
-                        child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
+                        child: _buildShutterButton(context, isCurrentlyLandscape),
                       ),
                     )
                   : Positioned(
@@ -382,7 +382,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       right: 0,
                       height: 140,
                       child: Center(
-                        child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
+                        child: _buildShutterButton(context, isCurrentlyLandscape),
                       ),
                     ),
             ],
@@ -438,20 +438,20 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   // シャッターボタンUI
-  Widget _buildShutterButton(BuildContext context, double screenAspectRatio, bool isCurrentlyLandscape) {
+  Widget _buildShutterButton(BuildContext context, bool isCurrentlyLandscape) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () async {
         try {
           final XFile file = await _controller!.takePicture();
           
-          // 画面比率、回転状態を渡して見た目通りに保存
-          await _saveAndCropImageWeb(file, screenAspectRatio, isCurrentlyLandscape);
+          // 【修正】画面比率依存を撤廃し、厳密な4:3または3:4（縦横状態）を直接渡して切り出し保存
+          await _saveAndCropImageWeb(file, isCurrentlyLandscape);
           
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('撮影完了！画面通りのサイズで保存しました。'),
+                content: Text('撮影完了！4:3の正確な比率で保存しました。'),
                 backgroundColor: Colors.green,
                 behavior: SnackBarBehavior.floating,
               ),

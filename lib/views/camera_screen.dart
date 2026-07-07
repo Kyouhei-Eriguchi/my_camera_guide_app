@@ -56,7 +56,7 @@ class _CameraScreenState extends State<CameraScreen> {
           selectedCamera = _cameras!.first;
         }
 
-        // 🌟【重要】maxだとブラウザが勝手に望遠レンズを掴むため、標準画角（引き）になるhighに変更
+        // 標準画角（引き）をしっかり掴むため ResolutionPreset.high を指定
         _controller = CameraController(
           selectedCamera,
           ResolutionPreset.high,
@@ -65,11 +65,11 @@ class _CameraScreenState extends State<CameraScreen> {
 
         await _controller!.initialize();
 
-        // 🌟 初期化成功後にズームの可能範囲を取得
+        // 初期化成功後にカメラデバイスのズーム可能範囲を取得
         if (mounted) {
           _minZoomLevel = await _controller!.getMinZoomLevel();
           _maxZoomLevel = await _controller!.getMaxZoomLevel();
-          if (_maxZoomLevel > 10.0) _maxZoomLevel = 10.0; // 操作性のため上限を10倍に制限
+          if (_maxZoomLevel > 8.0) _maxZoomLevel = 8.0; // 操作しやすくするため上限を8倍に制限
           
           setState(() {
             _isCameraInitialized = true;
@@ -97,8 +97,8 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  // 🌟🌟🌟 【修正】画面の引き（Fit状態）と手動ズームを完璧に連動させたクロップ関数 🌟🌟🌟
-  Future<void> _saveAndCropImageWeb(XFile file, double screenAspectRatio, bool isLandscape, double previewScale) async {
+  // 🌟🌟🌟 【修正】画面の引き状態と手動ズームを完璧に連動させたWebクロップ関数 🌟🌟🌟
+  Future<void> _saveAndCropImageWeb(XFile file, double screenAspectRatio, bool isLandscape) async {
     try {
       final Uint8List imageBytes = await file.readAsBytes();
       final blob = html.Blob([imageBytes], 'image/jpeg');
@@ -113,8 +113,8 @@ class _CameraScreenState extends State<CameraScreen> {
       final int imgH = img.naturalHeight;
 
       if (isLandscape) {
-        // 【横向き撮影時】
-        int cropW = (imgW / previewScale).round();
+        // 【横向き撮影時】画面アスペクト比に合わせて中央をクリップ
+        int cropW = imgW;
         int cropH = (cropW / screenAspectRatio).round();
         
         if (cropH > imgH) {
@@ -135,29 +135,31 @@ class _CameraScreenState extends State<CameraScreen> {
         _downloadImageWeb(dataUrl);
       } else {
         // 【縦向き撮影時】
-        int srcH = (imgH / previewScale).round();
-        int srcW = (srcH * screenAspectRatio).round();
+        // 縦長画面の比率（screenAspectRatioは 1.0 未満）の逆数を用いて、横長画像から縦長用の範囲を計算
+        double invAspect = 1.0 / screenAspectRatio;
+        int srcH = imgH;
+        int srcW = (srcH / invAspect).round();
         
         if (srcW > imgW) {
           srcW = imgW;
-          srcH = (imgW / screenAspectRatio).round();
+          srcH = (imgW * invAspect).round();
         }
 
         int startX = ((imgW - srcW) / 2).round();
         int startY = ((imgH - srcH) / 2).round();
 
-        // 🌟【重要修正】Canvas自体のサイズをあべこべにせず「縦長」として正しく直して定義
+        // Canvasのサイズは最終的に保存したい「縦長（幅が狭く、高さが高い）」に定義
         final html.CanvasElement canvas = html.CanvasElement()
           ..width = srcH   
           ..height = srcW; 
         
         final html.CanvasRenderingContext2D ctx = canvas.context2D;
 
-        // Canvasの中心を軸にして回転させる
+        // Canvasの中心を軸にして90度回転
         ctx.translate(canvas.width! / 2.0, canvas.height! / 2.0);
-        ctx.rotate(90 * 3.1415926535 / 180); // 90度時計回りに回転
+        ctx.rotate(90 * 3.1415926535 / 180); 
 
-        // 縦長の比率を維持したまま、切り出した中心領域を正しくマッピング
+        // 回転させた状態で、切り出した領域を正しくマッピング
         ctx.drawImageScaledFromSource(
           img, 
           startX, startY, srcW, srcH, 
@@ -174,7 +176,6 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  // Web用のダウンロード処理共通化
   void _downloadImageWeb(String dataUrl) {
     final anchor = html.AnchorElement(href: dataUrl)
       ..setAttribute("download", "guide_photo_${DateTime.now().millisecondsSinceEpoch}.jpg")
@@ -185,7 +186,6 @@ class _CameraScreenState extends State<CameraScreen> {
     html.document.body?.children.remove(anchor);
   }
 
-  // タイトルやメッセージから、縦向き撮影・横向き撮影のどちらを推奨しているかを判定するロジック
   bool _isRecommendLandscape() {
     final text = '${widget.theme.title} ${widget.theme.message}'.toLowerCase();
     if (text.contains('俯瞰') || text.contains('真上') || text.contains('縦')) {
@@ -194,7 +194,7 @@ class _CameraScreenState extends State<CameraScreen> {
     if (text.contains('横') || text.contains('シズル') || text.contains('端に寄せる')) {
       return true; // 横向き推奨
     }
-    return false; // デフォルトは縦向き推奨
+    return false; 
   }
 
   @override
@@ -218,48 +218,44 @@ class _CameraScreenState extends State<CameraScreen> {
     final bool isCurrentlyLandscape = screenSize.width > screenSize.height;
     final double screenAspectRatio = screenSize.width / screenSize.height;
 
-    // 推奨される向きの取得
     final bool recommendLandscape = _isRecommendLandscape();
-    // 現在の状態が推奨通りになっているか
     final bool isMatchingOrientation = isCurrentlyLandscape == recommendLandscape;
 
-    // 🌟🌟🌟 【重要修正】過剰にズームアップせず、本来の「引きの絵」が画面内に収まるように縮小計算 🌟🌟🌟
-    final double cameraAspectRatio = _controller!.value.aspectRatio;
-    double scale = 1.0;
-    if (isCurrentlyLandscape) {
-      scale = screenSize.width / (screenSize.height * cameraAspectRatio);
-    } else {
-      scale = screenSize.height / (screenSize.width * cameraAspectRatio);
+    // 🌟🌟🌟 【重要修正】バグの温床だった手動scale計算を廃止。Flutterのカメラ本来のアスペクト比を安全に取得 🌟🌟🌟
+    // 通常、Webのカメラプレビュー値は横長（例: 4/3 または 16/9）で返ります。
+    double cameraAspect = _controller!.value.aspectRatio;
+    
+    // デバイスが縦向きの場合は、アスペクト比の縦横を反転させて適合させます
+    if (!isCurrentlyLandscape && cameraAspect > 1) {
+      cameraAspect = 1.0 / cameraAspect;
     }
-    // 🌟 1.0より大きい（はみ出す）場合、逆数を取って「画面内に引きで全体が収まるサイズ」に補正
-    if (scale > 1.0) scale = 1.0 / scale;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         top: false, bottom: false, left: false, right: false,
         child: GestureDetector(
-          // 🌟 画面全体のピンチイン・アウトジェスチャーでズームを操作できるようにする
+          // 画面ピンチイン・アウトでスムーズにハードウェアズームを調整
           onScaleUpdate: (ScaleUpdateDetails details) {
             if (details.scale != 1.0) {
-              double zoomDelta = details.scale > 1.0 ? 0.04 : -0.04;
+              double zoomDelta = details.scale > 1.0 ? 0.03 : -0.03;
               _setZoom(_currentZoom + zoomDelta);
             }
           },
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // 【1】 カメラ映像（引きの状態で、アスペクト比を維持して画面内に綺麗に収める）
+              // 【1】 🌟 カメラ映像（変な余白・極小化バグを完全に排除し、画面いっぱいに引きで表示）
               Positioned.fill(
                 child: Center(
-                  child: Transform.scale(
-                    scale: scale,
+                  child: AspectRatio(
+                    aspectRatio: cameraAspect,
                     child: CameraPreview(_controller!),
                   ),
                 ),
               ),
 
-              // 【2】 なぞり書きガイド（画面の回転に合わせて自動追従）
+              // 【2】 なぞり書きガイド
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
@@ -272,7 +268,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
               ),
 
-              // 【3】 🌟 手動ズームコントロール（スライダーUI）の設置
+              // 【3】 手動ズームコントロール（スライダーUI）
               _buildZoomSlider(isCurrentlyLandscape),
 
               // 【4】 画面上部：タイトル・推奨向きアナウンス・メッセージ
@@ -309,14 +305,13 @@ class _CameraScreenState extends State<CameraScreen> {
                                 fontSize: 14,
                               ),
                               overflow: TextOverflow.ellipsis,
-                        ),
+                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     
-                    // カメラの推奨向き（縦 or 横）を表示するナビゲーションバッジ
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
@@ -349,7 +344,6 @@ class _CameraScreenState extends State<CameraScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // 解説メッセージ
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxHeight: isCurrentlyLandscape ? 60 : 120,
@@ -386,7 +380,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       bottom: 0,
                       width: 140,
                       child: Center(
-                        child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape, scale),
+                        child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
                       ),
                     )
                   : Positioned(
@@ -395,7 +389,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       right: 0,
                       height: 140,
                       child: Center(
-                        child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape, scale),
+                        child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape),
                       ),
                     ),
             ],
@@ -405,7 +399,7 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  // 🌟 ズームイン・アウトを手動で行うためのスライダーUI部品
+  // ズームイン・アウトを手動で行うためのスライダーUI部品
   Widget _buildZoomSlider(bool isLandscape) {
     if (_maxZoomLevel <= _minZoomLevel) return const SizedBox.shrink();
 
@@ -434,7 +428,6 @@ class _CameraScreenState extends State<CameraScreen> {
     );
 
     return Positioned(
-      // 縦向き時はボタン上部、横向き時は画面の左端付近にレイアウト
       bottom: isLandscape ? 20 : MediaQuery.of(context).padding.bottom + 160,
       left: isLandscape ? MediaQuery.of(context).padding.left + 24 : 0,
       right: isLandscape ? null : 0,
@@ -451,17 +444,16 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  // タップ判定を確実にするためHitTestBehaviorを適用した共通のシャッターボタンUI
-  Widget _buildShutterButton(BuildContext context, double screenAspectRatio, bool isCurrentlyLandscape, double previewScale) {
+  // シャッターボタンUI
+  Widget _buildShutterButton(BuildContext context, double screenAspectRatio, bool isCurrentlyLandscape) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () async {
         try {
-          // ① パシャリと撮影
           final XFile file = await _controller!.takePicture();
           
-          // ② 画面比率、回転状態、およびズームスケール（引き状態のscale）を渡して完全に見た目通り保存
-          await _saveAndCropImageWeb(file, screenAspectRatio, isCurrentlyLandscape, previewScale);
+          // 画面比率、回転状態を渡して見た目通りに保存
+          await _saveAndCropImageWeb(file, screenAspectRatio, isCurrentlyLandscape);
           
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

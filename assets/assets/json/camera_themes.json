@@ -24,7 +24,7 @@
     "purpose_what": "家族・子ども・友達（複数人）",
     "purpose_how": "直立不動じゃなくて、みんなの楽しそうな空気感や仲の良さを残したい！",
     "title": "笑顔弾ける！仲良しローアングル",
-    "message": "カメラを思い切っておへその位置まで下げて、少し見上げるように構えて！みんなにはカメラじゃなくて、お互いの顔を見合って爆笑してもらうのがコツです！",
+    "message": "カメラを思い切っておへ上の位置まで下げて、少し見上げるように構えて！みんなにはカメラじゃなくて、お互いの顔を見合って爆笑してもらうのがコツです！",
     "conditions": {
       "category": ["人物"],
       "location": "any",
@@ -53,7 +53,280 @@
     },
     "design_guide": {
       "shape_type": "thirds_target",
-      "shape_params": { "focus_zone": "bottom_right" }
+      "focus_zone": "bottom_right"
+    }
+  },
+
+  {
+    "id": "lunch_box_flat",
+    "initial_power": 520,
+    "purpose_what": "お弁当（日々の記録・アレンジ1）",
+    "purpose_how": "毎日の頑張りの証！お弁当の中身がすべて均等に、綺麗に見えるように残したい。",
+    "title": "お弁当のカタログ風（真上から真四角に）",
+    "message": "スマホを完全に水平にしてお弁当の真上から構えて！中央のスクエアガイドにお弁当の枠をピタッと合わせると、日記の1ページのような綺麗なカタログ風の記録になります。",
+    "conditions": {
+      "category": ["料理", "日常"],
+      "location": "indoor",
+      "brightness": "bright",
+      "orientation": "vertical",
+      "angle": "high_angle"
+    },
+    "design_guide": {
+      "shape_type": "square",
+      "shape_params": { "size_ratio": 0.65 }
+    }
+  },
+  {
+    "id": "lunch_box_diagonal",
+    "initial_power": 480,
+    "purpose_what": "お弁当（日々の記録・アレンジ2）",
+    "purpose_how": "今日のお弁当は自信作！立体感や奥行きを出して少しオシャレに見せたい。",
+    "title": "メインおかずを引き立てる斜め45度",
+    "message": "お弁当を手前から「斜め45度」の角度でのぞき込むように構えて！対角線のガイドに合わせてお弁当箱を傾けて配置し、手前のメインおかずにピントを合わせると奥行きが出ます。",
+    "conditions": {
+      "category": ["料理", "日常"],
+      "location": "indoor",
+      "brightness": "any",
+      "orientation": "horizontal",
+      "angle": "diagonal_45"
+    },
+    "design_guide": {
+      "shape_type": "diagonal_line",
+      "shape_params": { "direction": "bottom_left_to_top_right" }
+    }
+  },
+
+  {
+    "id": "cake_birthday_eye",
+    "initial_power": 610,
+    "purpose_what": "誕生日ケーキ（アレンジ1）",
+    "purpose_how": "ケーキ全体のデコレーションと、主役のプレートやローソクをしっかり見せたい！",
+    "title": "ケーキの主役席（ななめ俯瞰）",
+    "message": "真上すぎず横すぎず、斜め30度からケーキを見下ろして！手前の円形ガイドにケーキのメッセージプレートが重なるように位置を合わせると、文字までクッキリ感動が残せます。",
+    "conditions": {
+      "category": ["料理", "記念日"],
+      "location": "indoor",
+      "brightness": "any",
+      "orientation": "vertical",
+      "angle": "diagonal_30"
+    },
+    "design_guide": {
+      "shape_type": "target_circle",
+      "shape_params": { "center_x": 0.5, "center_y": 0.6, "radius": 0.2 }
+    }
+  },
+  {
+    "id": "cake_birthday_low",
+    "initial_power": 730,
+    "purpose_what": "誕生日ケーキ（アレンジ2）",
+    "purpose_how": "ローソクの炎の揺らめきや、ケーキの高さ・立体感をドラマチックに表現したい！",
+    "title": "キャンドルナイト（子供の目線ローアングル）",
+    "message": "スマホをテーブルの高さギリギリまで下げて、真横からケーキを捉えて！中央のクロスガイドに1番大きなローソクの炎を重ねるようにすると、背景がボケて主役がグッと際立ちます。",
+    "conditions": {
+      "category": ["料理", "記念日"],
+      "location": "indoor",
+      "brightness": "dark",
+      "orientation": "horizontal",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "shape_type": "center_cross",
+      "shape_params": {}
+    }
+  },
+
+  {
+    "id": "travel_landscape_thirds",
+    "initial_power": 1100,
+    "purpose_what": "旅行（景色・ビーチ・大空間・アレンジ1）",
+    "purpose_how": "目の前に広がる壮大な海や大自然を、プロっぽく安定した構図で切り取りたい！",
+    "title": "王道の黄金比（水平線を三分割に）",
+    "message": "スマホを【横向き】に構えて！画面を上下に3分割している下のラインに「水平線」または「地平線」をピタッと合わせてみて。これだけで空と大地のバランスが劇的に美しくなります。",
+    "conditions": {
+      "category": ["景観", "旅行"],
+      "location": "outdoor",
+      "brightness": "bright",
+      "orientation": "horizontal",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "shape_type": "horizontal_thirds",
+      "shape_params": { "line_index": 2 }
+    }
+  },
+  {
+    "id": "travel_waterfall_vertical",
+    "initial_power": 950,
+    "purpose_what": "旅行（滝・高い木々・景観・アレンジ2）",
+    "purpose_how": "滝の激しい流れや、縦に長い大自然の圧倒的なスケール感をダイナミックに残したい！",
+    "title": "そびえ立つ大自然（中央縦ライン構図）",
+    "message": "スマホを【縦向き】に！画面中央をまっすぐ貫く垂直のガイド線に、滝の流れや太い大木の幹を重ねて撮影して。上下に思い切り突き抜けるような、迫力ある構図に仕上がります。",
+    "conditions": {
+      "category": ["景観", "旅行"],
+      "location": "outdoor",
+      "brightness": "bright",
+      "orientation": "vertical",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "shape_type": "vertical_center_line",
+      "shape_params": {}
+    }
+  },
+  {
+    "id": "travel_shrine_tunnel",
+    "initial_power": 1350,
+    "purpose_what": "旅行（神社・参道・鳥居・アレンジ3）",
+    "purpose_how": "神社の参道や鳥居が奥へと続く、厳かな雰囲気や吸い込まれそうな奥行き感を表現したい！",
+    "title": "神秘の道（一点透視の奥行き）",
+    "message": "参道のど真ん中に立ち、スマホを水平に構えて！ガイド線の道筋が画面中央奥の「1点」に収束するように位置取りをすると、吸い込まれるような美しい奥行き（放射線構図）が完成します。",
+    "conditions": {
+      "category": ["景観", "旅行"],
+      "location": "outdoor",
+      "brightness": "any",
+      "orientation": "vertical",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "shape_type": "perspective_lines",
+      "shape_params": { "vanishing_point_x": 0.5, "vanishing_point_y": 0.5 }
+    }
+  },
+
+  {
+    "id": "anniversary_hero_diagonal",
+    "initial_power": 1580,
+    "purpose_what": "記念写真（誕生日・お祝い・アレンジ1）",
+    "purpose_how": "ただ並んでパシャリじゃつまらない！記念日の「主役」を最高にドラマチックに盛り上げたい。",
+    "title": "主役を惹き立てる（黄金比の交点配置）",
+    "message": "主役の人（または記念品）を真ん中から少しずらし、左上の交点ターゲットに顔や目を重ねるように構えて！空いた右側のスペースに背景の飾り付けや景色を写し込むと洗練されます。",
+    "conditions": {
+      "category": ["人物", "記念日"],
+      "location": "indoor",
+      "brightness": "bright",
+      "orientation": "horizontal",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "shape_type": "thirds_target",
+      "shape_params": { "focus_zone": "top_left" }
+    }
+  },
+  {
+    "id": "anniversary_surprise_up",
+    "initial_power": 1820,
+    "purpose_what": "記念写真（プレゼント・花束・アレンジ2）",
+    "purpose_how": "もらった瞬間の嬉しそうな表情と、記念の品（花束やプレゼント）の双方をバッチリ残したい！",
+    "title": "歓喜の瞬間（手前と奥の二刀流）",
+    "message": "スマホを少し傾け、手前の大きなガイド領域に「花束やプレゼント」を大きく写し、奥の小さめのガイドに「本人の最高の笑顔」が収まるように奥行きを作って。臨場感が爆発します！",
+    "conditions": {
+      "category": ["人物", "記念日"],
+      "location": "any",
+      "brightness": "any",
+      "orientation": "vertical",
+      "angle": "diagonal_45"
+    },
+    "design_guide": {
+      "shape_type": "double_target",
+      "shape_params": { "foreground_zone": "bottom_right", "background_zone": "top_left" }
+    }
+  },
+
+  {
+    "id": "group_building_match",
+    "initial_power": 2100,
+    "purpose_what": "集合写真（建物バック・アレンジ1）",
+    "purpose_how": "お城や歴史的建造物などのシンボルと、自分たちの姿をどっちも隠さず綺麗に両立させたい！",
+    "title": "観光地マスター（下半分に全員集合）",
+    "message": "スマホを【横向き】にして一歩引いて！画面の「上側半分」の大きな四角に建物の全体を収め、全員の体は「下側半分」のガイドラインに収まるようにしゃがむか位置調整して。双方が活きます！",
+    "conditions": {
+      "category": ["人物", "旅行"],
+      "location": "outdoor",
+      "brightness": "bright",
+      "orientation": "horizontal",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "shape_type": "split_horizontal_half",
+      "shape_params": { "line_y": 0.5, "target_zone": "bottom" }
+    }
+  },
+  {
+    "id": "group_nature_frame",
+    "initial_power": 2300,
+    "purpose_what": "集合写真（広大な景色バック・アレンジ2）",
+    "purpose_how": "大自然のパノラマ感に包まれているような、開放的でおしゃれな集合写真にしたい！",
+    "title": "大自然のセンターフレーム",
+    "message": "あえて景色を贅沢に広く見せるため、メンバー全員は画面中央の「楕円フレーム」の中にぎゅっと身を寄せて集まって！周りの余白に雄大な景色が広がり、旅の思い出がより美しく残せます。",
+    "conditions": {
+      "category": ["人物", "旅行"],
+      "location": "outdoor",
+      "brightness": "any",
+      "orientation": "horizontal",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "shape_type": "oval",
+      "shape_params": { "center_x": 0.5, "center_y": 0.55, "width": 0.45, "height": 0.35 }
+    }
+  },
+
+  {
+    "id": "food_single_dish",
+    "initial_power": 980,
+    "purpose_what": "料理（お皿1つ・スープ・デザートなど・アレンジ1）",
+    "purpose_how": "自慢の一皿を、高級レストランのメニュー写真のように美しく上品に目立たせたい！",
+    "title": "洗練された一皿（三分割余白マスター）",
+    "message": "スマホの角度を「斜め45度」に固定！お皿全体を真ん中に置くのではなく、画面左下の三分割交点ガイドにお皿の中心を寄せて。右上に向かって綺麗な「抜けの余白」が生まれ、上品になります。",
+    "conditions": {
+      "category": ["料理"],
+      "location": "indoor",
+      "brightness": "any",
+      "orientation": "vertical",
+      "angle": "diagonal_45"
+    },
+    "design_guide": {
+      "shape_type": "thirds_target",
+      "shape_params": { "focus_zone": "bottom_left" }
+    }
+  },
+
+  {
+    "id": "activity_sports_action",
+    "initial_power": 1150,
+    "purpose_what": "作業・調理・活動・スポーツ（アレンジ1）",
+    "purpose_how": "部活、料理中の手元、DIYなど、動いている瞬間をブレずに躍動感たっぷりに捉えたい！",
+    "title": "躍動の瞬間（進行方向を開ける）",
+    "message": "動いている人や手元の「進行方向（向いている向き）」に大きな余白を作ろう！人物や主役の手元は右側の縦ラインガイドに合わせ、左側を大胆に開けることで、走る・作る動作がダイナミックになります。",
+    "conditions": {
+      "category": ["アクティビティ"],
+      "location": "any",
+      "brightness": "bright",
+      "orientation": "horizontal",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "shape_type": "vertical_thirds",
+      "shape_params": { "line_index": 2 }
+    }
+  },
+  {
+    "id": "activity_craftsman_low",
+    "initial_power": 1420,
+    "purpose_what": "作業・調理・活動・スポーツ（アレンジ2）",
+    "purpose_how": "何かに没頭している姿や、職人のような集中しているカッコいい世界観を演出したい！",
+    "title": "没頭の世界（手元重視のローアングル）",
+    "message": "スマホのカメラを「作業している手元や地面と同じ高さ」までグッと下げ、少し見上げる角度で構えて！中央の下半分にあるターゲットエリアに道具や手元を重ねると、映画のワンシーンのようになります。",
+    "conditions": {
+      "category": ["アクティビティ"],
+      "location": "any",
+      "brightness": "any",
+      "orientation": "vertical",
+      "angle": "low_angle"
+    },
+    "design_guide": {
+      "shape_type": "target_circle",
+      "shape_params": { "center_x": 0.5, "center_y": 0.7, "radius": 0.18 }
     }
   }
 ]

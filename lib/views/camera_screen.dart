@@ -56,7 +56,7 @@ class _CameraScreenState extends State<CameraScreen> {
           selectedCamera = _cameras!.first;
         }
 
-        // 標準画角（引き）をしっかり掴むため ResolutionPreset.high を指定
+        // Appleの標準的なデフォルトに合わせ、安定した画角を得るため ResolutionPreset.high を指定
         _controller = CameraController(
           selectedCamera,
           ResolutionPreset.high,
@@ -97,7 +97,7 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  // 🌟🌟🌟 【修正】画面の引き状態と手動ズームを完璧に連動させたWebクロップ関数 🌟🌟🌟
+  // 🌟🌟🌟 【修正】縦向き撮影時の90度不要回転を防止し、画面の見た目通りに切り出すWeb保存関数 🌟🌟🌟
   Future<void> _saveAndCropImageWeb(XFile file, double screenAspectRatio, bool isLandscape) async {
     try {
       final Uint8List imageBytes = await file.readAsBytes();
@@ -108,12 +108,15 @@ class _CameraScreenState extends State<CameraScreen> {
       img.src = originalUrl;
       await img.onLoad.first;
 
-      // Webカメラの生の出力解像度（常に横長 imgW > imgH）
+      // Webカメラの生の出力解像度（基本的にブラウザから供給される生データは常に横長 imgW > imgH）
       final int imgW = img.naturalWidth;
       final int imgH = img.naturalHeight;
 
+      final html.CanvasElement canvas = html.CanvasElement();
+      final html.CanvasRenderingContext2D ctx = canvas.context2D;
+
       if (isLandscape) {
-        // 【横向き撮影時】画面アスペクト比に合わせて中央をクリップ
+        // 【横向き撮影時】
         int cropW = imgW;
         int cropH = (cropW / screenAspectRatio).round();
         
@@ -125,18 +128,14 @@ class _CameraScreenState extends State<CameraScreen> {
         int startX = ((imgW - cropW) / 2).round();
         int startY = ((imgH - cropH) / 2).round();
 
-        final html.CanvasElement canvas = html.CanvasElement()
-          ..width = cropW
-          ..height = cropH;
-        final html.CanvasRenderingContext2D ctx = canvas.context2D;
+        canvas.width = cropW;
+        canvas.height = cropH;
         ctx.drawImageScaledFromSource(img, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
-
-        final String dataUrl = canvas.toDataUrl('image/jpeg', 0.9);
-        _downloadImageWeb(dataUrl);
       } else {
         // 【縦向き撮影時】
-        // 縦長画面の比率（screenAspectRatioは 1.0 未満）の逆数を用いて、横長画像から縦長用の範囲を計算
-        double invAspect = 1.0 / screenAspectRatio;
+        // スマホを縦に持っている場合、生データ（横長）の「中央の縦長領域」を抽出し、
+        // 90度余計に回転して傾いてしまう現象を防ぐため、正しい上向き（縦長）のCanvasにマッピングします。
+        double invAspect = 1.0 / screenAspectRatio; // 縦長比率の逆数
         int srcH = imgH;
         int srcW = (srcH / invAspect).round();
         
@@ -148,27 +147,16 @@ class _CameraScreenState extends State<CameraScreen> {
         int startX = ((imgW - srcW) / 2).round();
         int startY = ((imgH - srcH) / 2).round();
 
-        // Canvasのサイズは最終的に保存したい「縦長（幅が狭く、高さが高い）」に定義
-        final html.CanvasElement canvas = html.CanvasElement()
-          ..width = srcH   
-          ..height = srcW; 
-        
-        final html.CanvasRenderingContext2D ctx = canvas.context2D;
+        // 最終出力される画像サイズ（縦長）
+        canvas.width = srcW;
+        canvas.height = srcH;
 
-        // Canvasの中心を軸にして90度回転
-        ctx.translate(canvas.width! / 2.0, canvas.height! / 2.0);
-        ctx.rotate(90 * 3.1415926535 / 180); 
-
-        // 回転させた状態で、切り出した領域を正しくマッピング
-        ctx.drawImageScaledFromSource(
-          img, 
-          startX, startY, srcW, srcH, 
-          -srcW / 2, -srcH / 2, srcW, srcH
-        );
-
-        final String dataUrl = canvas.toDataUrl('image/jpeg', 0.9);
-        _downloadImageWeb(dataUrl);
+        // 余計な回転を挟まず、生データの該当中央エリアをそのまま縦長にフィッティングして描画
+        ctx.drawImageScaledFromSource(img, startX, startY, srcW, srcH, 0, 0, srcW, srcH);
       }
+
+      final String dataUrl = canvas.toDataUrl('image/jpeg', 0.9);
+      _downloadImageWeb(dataUrl);
 
       html.Url.revokeObjectUrl(originalUrl);
     } catch (e) {
@@ -221,13 +209,15 @@ class _CameraScreenState extends State<CameraScreen> {
     final bool recommendLandscape = _isRecommendLandscape();
     final bool isMatchingOrientation = isCurrentlyLandscape == recommendLandscape;
 
-    // 🌟🌟🌟 【重要修正】バグの温床だった手動scale計算を廃止。Flutterのカメラ本来のアスペクト比を安全に取得 🌟🌟🌟
-    // 通常、Webのカメラプレビュー値は横長（例: 4/3 または 16/9）で返ります。
+    // 🌟🌟🌟 【重要修正】デバイスの回転に合わせてキャンバスのアスペクト比を動的にスイッチ 🌟🌟🌟
+    // Appleの標準デフォルト画角（4:3ベース）を画面の現在の向き（縦・横）に合わせてリアルタイムに変形させます。
     double cameraAspect = _controller!.value.aspectRatio;
     
-    // デバイスが縦向きの場合は、アスペクト比の縦横を反転させて適合させます
-    if (!isCurrentlyLandscape && cameraAspect > 1) {
-      cameraAspect = 1.0 / cameraAspect;
+    // コントローラの生の比率に関わらず、スマホが「横向き」なら横長比率、 「縦向き」なら縦長比率に強制連動
+    if (isCurrentlyLandscape) {
+      if (cameraAspect < 1.0) cameraAspect = 1.0 / cameraAspect; // 必ず1.0以上に（例: 1.333 = 4:3）
+    } else {
+      if (cameraAspect > 1.0) cameraAspect = 1.0 / cameraAspect; // 必ず1.0未満に（例: 0.75 = 3:4）
     }
 
     return Scaffold(
@@ -245,12 +235,15 @@ class _CameraScreenState extends State<CameraScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // 【1】 🌟 カメラ映像（変な余白・極小化バグを完全に排除し、画面いっぱいに引きで表示）
+              // 【1】 🌟 カメラ映像（デバイス回転時に遅れず追従し、画面いっぱいに表示）
               Positioned.fill(
                 child: Center(
                   child: AspectRatio(
                     aspectRatio: cameraAspect,
-                    child: CameraPreview(_controller!),
+                    child: CameraPreview(
+                      _controller!,
+                      child: const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               ),

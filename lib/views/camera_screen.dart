@@ -20,13 +20,18 @@ class _CameraScreenState extends State<CameraScreen> {
   List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
 
+  // 🌟 ズーム手動調整用の変数
+  double _minZoomLevel = 1.0;
+  double _maxZoomLevel = 1.0;
+  double _currentZoom = 1.0;
+
   @override
   void initState() {
     super.initState();
     _initializeCamera();
   }
 
-  // 超広角レンズを避けて「標準等倍レンズ」を強制選択するロジック
+  // 超広角・望遠を避けて「標準等倍レンズ」を強制選択するロジック
   Future<void> _initializeCamera() async {
     try {
       _cameras = await availableCameras();
@@ -41,8 +46,8 @@ class _CameraScreenState extends State<CameraScreen> {
         if (backCameras.isNotEmpty) {
           if (backCameras.length > 1) {
             selectedCamera = backCameras.firstWhere(
-              (c) => !c.name.toLowerCase().contains('wide') && !c.name.toLowerCase().contains('ultrawide'),
-              orElse: () => backCameras[1],
+              (c) => !c.name.toLowerCase().contains('wide') && !c.name.toLowerCase().contains('ultrawide') && !c.name.toLowerCase().contains('telephoto'),
+              orElse: () => backCameras.first,
             );
           } else {
             selectedCamera = backCameras.first;
@@ -51,14 +56,21 @@ class _CameraScreenState extends State<CameraScreen> {
           selectedCamera = _cameras!.first;
         }
 
+        // 🌟【重要】maxだとブラウザが勝手に望遠レンズを掴むため、標準画角（引き）になるhighに変更
         _controller = CameraController(
           selectedCamera,
-          ResolutionPreset.max,
+          ResolutionPreset.high,
           enableAudio: false,
         );
 
         await _controller!.initialize();
+
+        // 🌟 初期化成功後にズームの可能範囲を取得
         if (mounted) {
+          _minZoomLevel = await _controller!.getMinZoomLevel();
+          _maxZoomLevel = await _controller!.getMaxZoomLevel();
+          if (_maxZoomLevel > 10.0) _maxZoomLevel = 10.0; // 操作性のため上限を10倍に制限
+          
           setState(() {
             _isCameraInitialized = true;
           });
@@ -69,7 +81,23 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  // 🌟🌟🌟 【大幅改善】画面上のプレビュー拡大率（previewScale）を考慮して「見た目通り」に切り抜く関数 🌟🌟🌟
+  // 🌟 ズーム倍率を変更する関数
+  Future<void> _setZoom(double value) async {
+    if (_controller == null || !_isCameraInitialized) return;
+    if (value < _minZoomLevel) value = _minZoomLevel;
+    if (value > _maxZoomLevel) value = _maxZoomLevel;
+
+    try {
+      await _controller!.setZoomLevel(value);
+      setState(() {
+        _currentZoom = value;
+      });
+    } catch (e) {
+      debugPrint('ズーム設定エラー: $e');
+    }
+  }
+
+  // 🌟🌟🌟 【修正】画面の引き（Fit状態）と手動ズームを完璧に連動させたクロップ関数 🌟🌟🌟
   Future<void> _saveAndCropImageWeb(XFile file, double screenAspectRatio, bool isLandscape, double previewScale) async {
     try {
       final Uint8List imageBytes = await file.readAsBytes();
@@ -86,7 +114,6 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (isLandscape) {
         // 【横向き撮影時】
-        // 画面で見えている範囲のサイズ（拡大スケールを反映）
         int cropW = (imgW / previewScale).round();
         int cropH = (cropW / screenAspectRatio).round();
         
@@ -108,7 +135,6 @@ class _CameraScreenState extends State<CameraScreen> {
         _downloadImageWeb(dataUrl);
       } else {
         // 【縦向き撮影時】
-        // 画面の拡大スケールを考慮して、生の横長データから「実際に見えている領域」の幅・高さを算出
         int srcH = (imgH / previewScale).round();
         int srcW = (srcH * screenAspectRatio).round();
         
@@ -120,20 +146,22 @@ class _CameraScreenState extends State<CameraScreen> {
         int startX = ((imgW - srcW) / 2).round();
         int startY = ((imgH - srcH) / 2).round();
 
+        // 🌟【重要修正】Canvas自体のサイズをあべこべにせず「縦長」として正しく直して定義
         final html.CanvasElement canvas = html.CanvasElement()
-          ..width = srcW
-          ..height = srcH;
+          ..width = srcH   
+          ..height = srcW; 
+        
         final html.CanvasRenderingContext2D ctx = canvas.context2D;
 
         // Canvasの中心を軸にして回転させる
         ctx.translate(canvas.width! / 2.0, canvas.height! / 2.0);
         ctx.rotate(90 * 3.1415926535 / 180); // 90度時計回りに回転
 
-        // 計算したズーム領域から適切に切り出してはめ込む
+        // 縦長の比率を維持したまま、切り出した中心領域を正しくマッピング
         ctx.drawImageScaledFromSource(
           img, 
           startX, startY, srcW, srcH, 
-          -srcH / 2, -srcW / 2, srcH, srcW
+          -srcW / 2, -srcH / 2, srcW, srcH
         );
 
         final String dataUrl = canvas.toDataUrl('image/jpeg', 0.9);
@@ -195,7 +223,7 @@ class _CameraScreenState extends State<CameraScreen> {
     // 現在の状態が推奨通りになっているか
     final bool isMatchingOrientation = isCurrentlyLandscape == recommendLandscape;
 
-    // 🌟画面が寄りすぎる（過剰にズームされる）問題を解決するスケール計算
+    // 🌟🌟🌟 【重要修正】過剰にズームアップせず、本来の「引きの絵」が画面内に収まるように縮小計算 🌟🌟🌟
     final double cameraAspectRatio = _controller!.value.aspectRatio;
     double scale = 1.0;
     if (isCurrentlyLandscape) {
@@ -203,168 +231,227 @@ class _CameraScreenState extends State<CameraScreen> {
     } else {
       scale = screenSize.height / (screenSize.width * cameraAspectRatio);
     }
-    if (scale < 1.0) scale = 1.0 / scale;
+    // 🌟 1.0より大きい（はみ出す）場合、逆数を取って「画面内に引きで全体が収まるサイズ」に補正
+    if (scale > 1.0) scale = 1.0 / scale;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         top: false, bottom: false, left: false, right: false,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 【1】 カメラ映像（過剰なクロップ・寄りを防ぎつつ画面全体に表示）
-            Positioned.fill(
-              child: Center(
-                child: Transform.scale(
-                  scale: scale,
-                  child: CameraPreview(_controller!),
-                ),
-              ),
-            ),
-
-            // 【2】 なぞり書きガイド（画面の回転に合わせて自動追従）
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: GuidePainter(
-                    shapeType: widget.theme.designGuide['shape_type'] ?? 'default',
-                    shapeParams: widget.theme.designGuide['shape_params'] ?? {},
-                    isHorizontal: isCurrentlyLandscape,
+        child: GestureDetector(
+          // 🌟 画面全体のピンチイン・アウトジェスチャーでズームを操作できるようにする
+          onScaleUpdate: (ScaleUpdateDetails details) {
+            if (details.scale != 1.0) {
+              double zoomDelta = details.scale > 1.0 ? 0.04 : -0.04;
+              _setZoom(_currentZoom + zoomDelta);
+            }
+          },
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 【1】 カメラ映像（引きの状態で、アスペクト比を維持して画面内に綺麗に収める）
+              Positioned.fill(
+                child: Center(
+                  child: Transform.scale(
+                    scale: scale,
+                    child: CameraPreview(_controller!),
                   ),
                 ),
               ),
-            ),
 
-            // 【3】 画面上部：タイトル・推奨向きアナウンス・メッセージ
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              left: MediaQuery.of(context).padding.left + 16,
-              right: isCurrentlyLandscape ? 160 : 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: Colors.black.withOpacity(0.6),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            widget.theme.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // カメラの推奨向き（縦 or 横）を表示するナビゲーションバッジ
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isMatchingOrientation 
-                          ? Colors.green.withOpacity(0.85)
-                          : Colors.orange.withOpacity(0.85),
-                      borderRadius: BorderRadius.circular(8),
+              // 【2】 なぞり書きガイド（画面の回転に合わせて自動追従）
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: GuidePainter(
+                      shapeType: widget.theme.designGuide['shape_type'] ?? 'default',
+                      shapeParams: widget.theme.designGuide['shape_params'] ?? {},
+                      isHorizontal: isCurrentlyLandscape,
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                  ),
+                ),
+              ),
+
+              // 【3】 🌟 手動ズームコントロール（スライダーUI）の設置
+              _buildZoomSlider(isCurrentlyLandscape),
+
+              // 【4】 画面上部：タイトル・推奨向きアナウンス・メッセージ
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 16,
+                left: MediaQuery.of(context).padding.left + 16,
+                right: isCurrentlyLandscape ? 160 : 16,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       children: [
-                        Icon(
-                          recommendLandscape ? Icons.screen_rotation : Icons.stay_current_portrait,
-                          color: Colors.white,
-                          size: 16,
+                        CircleAvatar(
+                          backgroundColor: Colors.black.withOpacity(0.6),
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          recommendLandscape 
-                              ? (isMatchingOrientation ? '判定：横向き撮影（バッチリ！）' : 'おすすめ：スマホを【横向き】にしてください')
-                              : (isMatchingOrientation ? '判定：縦向き撮影（バッチリ！）' : 'おすすめ：スマホを【縦向き】にしてください'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              widget.theme.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                        ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // 解説メッセージ
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: isCurrentlyLandscape ? 60 : 120,
-                    ),
-                    child: SingleChildScrollView(
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white10),
-                        ),
-                        child: Text(
-                          widget.theme.message,
-                          style: const TextStyle(
+                    const SizedBox(height: 8),
+                    
+                    // カメラの推奨向き（縦 or 横）を表示するナビゲーションバッジ
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isMatchingOrientation 
+                            ? Colors.green.withOpacity(0.85)
+                            : Colors.orange.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            recommendLandscape ? Icons.screen_rotation : Icons.stay_current_portrait,
                             color: Colors.white,
-                            fontSize: 12,
-                            height: 1.4,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            recommendLandscape 
+                                ? (isMatchingOrientation ? '判定：横向き撮影（バッチリ！）' : 'おすすめ：スマホを【横向き】にしてください')
+                                : (isMatchingOrientation ? '判定：縦向き撮影（バッチリ！）' : 'おすすめ：スマホを【縦向き】にしてください'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // 解説メッセージ
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: isCurrentlyLandscape ? 60 : 120,
+                      ),
+                      child: SingleChildScrollView(
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white10),
+                          ),
+                          child: Text(
+                            widget.theme.message,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // 【4】 シャッターボタン（計算した `scale` を引数として渡すよう修正）
-            isCurrentlyLandscape
-                ? Positioned(
-                    right: MediaQuery.of(context).padding.right + 12,
-                    top: 0,
-                    bottom: 0,
-                    width: 140,
-                    child: Center(
-                      child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape, scale),
+              // 【5】 シャッターボタン
+              isCurrentlyLandscape
+                  ? Positioned(
+                      right: MediaQuery.of(context).padding.right + 12,
+                      top: 0,
+                      bottom: 0,
+                      width: 140,
+                      child: Center(
+                        child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape, scale),
+                      ),
+                    )
+                  : Positioned(
+                      bottom: MediaQuery.of(context).padding.bottom + 24,
+                      left: 0,
+                      right: 0,
+                      height: 140,
+                      child: Center(
+                        child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape, scale),
+                      ),
                     ),
-                  )
-                : Positioned(
-                    bottom: MediaQuery.of(context).padding.bottom + 24,
-                    left: 0,
-                    right: 0,
-                    height: 140,
-                    child: Center(
-                      child: _buildShutterButton(context, screenAspectRatio, isCurrentlyLandscape, scale),
-                    ),
-                  ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // 🌟 タップ判定を確実にするためHitTestBehaviorを適用した共通のシャッターボタンUI
+  // 🌟 ズームイン・アウトを手動で行うためのスライダーUI部品
+  Widget _buildZoomSlider(bool isLandscape) {
+    if (_maxZoomLevel <= _minZoomLevel) return const SizedBox.shrink();
+
+    final sliderWidget = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.zoom_out, color: Colors.white70, size: 18),
+        SizedBox(
+          width: 140,
+          child: Slider(
+            value: _currentZoom,
+            min: _minZoomLevel,
+            max: _maxZoomLevel,
+            activeColor: Colors.green,
+            inactiveColor: Colors.white24,
+            onChanged: (value) => _setZoom(value),
+          ),
+        ),
+        const Icon(Icons.zoom_in, color: Colors.white70, size: 18),
+        const SizedBox(width: 6),
+        Text(
+          '${_currentZoom.toStringAsFixed(1)}x',
+          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+
+    return Positioned(
+      // 縦向き時はボタン上部、横向き時は画面の左端付近にレイアウト
+      bottom: isLandscape ? 20 : MediaQuery.of(context).padding.bottom + 160,
+      left: isLandscape ? MediaQuery.of(context).padding.left + 24 : 0,
+      right: isLandscape ? null : 0,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: sliderWidget,
+        ),
+      ),
+    );
+  }
+
+  // タップ判定を確実にするためHitTestBehaviorを適用した共通のシャッターボタンUI
   Widget _buildShutterButton(BuildContext context, double screenAspectRatio, bool isCurrentlyLandscape, double previewScale) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -373,7 +460,7 @@ class _CameraScreenState extends State<CameraScreen> {
           // ① パシャリと撮影
           final XFile file = await _controller!.takePicture();
           
-          // ② 画面比率、回転状態、さらに【プレビューのズームスケール倍率】を渡して切り抜き実行！
+          // ② 画面比率、回転状態、およびズームスケール（引き状態のscale）を渡して完全に見た目通り保存
           await _saveAndCropImageWeb(file, screenAspectRatio, isCurrentlyLandscape, previewScale);
           
           if (mounted) {

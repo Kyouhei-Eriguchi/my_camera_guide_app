@@ -15,7 +15,14 @@
     },
     "design_guide": {
       "shape_type": "circle",
-      "shape_params": { "size_ratio": 0.7 }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "center_x": 0.5,
+        "center_y": 0.5,
+        "size_ratio": 0.7,
+        "draw_style": "dashed",
+        "silhouette_type": "zen_tray_contour"
+      }
     }
   },
   {
@@ -34,7 +41,14 @@
     },
     "design_guide": {
       "shape_type": "center_cross",
-      "shape_params": {}
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "draw_style": "dashed",
+        "silhouette_type": "multi_person_sitting",
+        "silhouette_scale": 0.6,
+        "center_x": 0.5,
+        "center_y": 0.55
+      }
     }
   },
   {
@@ -53,10 +67,17 @@
     },
     "design_guide": {
       "shape_type": "thirds_target",
-      "focus_zone": "bottom_right"
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "focus_zone": "bottom_right",
+        "draw_style": "dashed",
+        "grid_visible": true,
+        "silhouette_type": "food_zoom_dish",
+        "center_x": 0.7,
+        "center_y": 0.65
+      }
     }
   },
-
   {
     "id": "lunch_box_flat",
     "initial_power": 520,
@@ -73,7 +94,14 @@
     },
     "design_guide": {
       "shape_type": "square",
-      "shape_params": { "size_ratio": 0.65 }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "center_x": 0.5,
+        "center_y": 0.5,
+        "size_ratio": 0.65,
+        "draw_style": "dashed",
+        "silhouette_type": "lunch_box_contour"
+      }
     }
   },
   {
@@ -92,10 +120,16 @@
     },
     "design_guide": {
       "shape_type": "diagonal_line",
-      "shape_params": { "direction": "bottom_left_to_top_right" }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "direction": "bottom_left_to_top_right",
+        "draw_style": "dashed",
+        "silhouette_type": "lunch_box_3d_angle",
+        "center_x": 0.5,
+        "center_y": 0.5
+      }
     }
   },
-
   {
     "id": "cake_birthday_eye",
     "initial_power": 610,
@@ -112,7 +146,14 @@
     },
     "design_guide": {
       "shape_type": "target_circle",
-      "shape_params": { "center_x": 0.5, "center_y": 0.6, "radius": 0.2 }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "center_x": 0.5,
+        "center_y": 0.6,
+        "radius": 0.2,
+        "draw_style": "dashed",
+        "silhouette_type": "whole_cake_with_candles"
+      }
     }
   },
   {
@@ -131,10 +172,15 @@
     },
     "design_guide": {
       "shape_type": "center_cross",
-      "shape_params": {}
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "draw_style": "dashed",
+        "silhouette_type": "cake_side_view_silhouette",
+        "center_x": 0.5,
+        "center_y": 0.6
+      }
     }
   },
-
   {
     "id": "travel_landscape_thirds",
     "initial_power": 1100,
@@ -151,7 +197,12 @@
     },
     "design_guide": {
       "shape_type": "horizontal_thirds",
-      "shape_params": { "line_index": 2 }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "line_index": 2,
+        "draw_style": "dashed",
+        "silhouette_type": "horizon_and_mountain_line"
+      }
     }
   },
   {
@@ -170,7 +221,11 @@
     },
     "design_guide": {
       "shape_type": "vertical_center_line",
-      "shape_params": {}
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "draw_style": "dashed",
+        "silhouette_type": "vertical_waterfall_stream"
+      }
     }
   },
   {
@@ -189,10 +244,15 @@
     },
     "design_guide": {
       "shape_type": "perspective_lines",
-      "shape_params": { "vanishing_point_x": 0.5, "vanishing_point_y": 0.5 }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "vanishing_point_x": 0.5,
+        "vanishing_point_y": 0.45,
+        "draw_style": "dashed",
+        "silhouette_type": "shrine_torii_gate_contour"
+      }
     }
   },
-
   {
     "id": "anniversary_hero_diagonal",
     "initial_power": 1580,
@@ -209,7 +269,15 @@
     },
     "design_guide": {
       "shape_type": "thirds_target",
-      "shape_params": { "focus_zone": "top_left" }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "focus_zone": "top_left",
+        "draw_style": "dashed",
+        "grid_visible": true,
+        "silhouette_type": "single_person_portrait",
+        "center_x": 0.33,
+        "center_y": 0.4
+      }
     }
   },
   {
@@ -218,7 +286,7 @@
     "purpose_what": "記念写真（プレゼント・花束・アレンジ2）",
     "purpose_how": "もらった瞬間の嬉しそうな表情と、記念の品（花束やプレゼント）の双方をバッチリ残したい！",
     "title": "歓喜の瞬間（手前と奥の二刀流）",
-    "message": "スマホを少し傾け、手前の大きなガイド領域に「花束やプレゼント」を大きく写し、奥の小さめのガイドに「本人の最高の笑顔」が収まるように奥行きを作って。臨場感が爆発します！",
+    "message": "スマホを少し傾け、手前の大きなガイド領域に「花束やプレゼント」を大きく写し、奥の小さめのガイドに「本人の最高の笑顔」が収まるように奥行きを作して。臨場感が爆発します！",
     "conditions": {
       "category": ["人物", "記念日"],
       "location": "any",
@@ -228,10 +296,20 @@
     },
     "design_guide": {
       "shape_type": "double_target",
-      "shape_params": { "foreground_zone": "bottom_right", "background_zone": "top_left" }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "draw_style": "dashed",
+        "foreground_zone": "bottom_right",
+        "foreground_silhouette": "hand_holding_bouquet",
+        "background_zone": "top_left",
+        "background_silhouette": "person_happy_face",
+        "foreground_center_x": 0.7,
+        "foreground_center_y": 0.7,
+        "background_center_x": 0.3,
+        "background_center_y": 0.3
+      }
     }
   },
-
   {
     "id": "group_building_match",
     "initial_power": 2100,
@@ -248,7 +326,14 @@
     },
     "design_guide": {
       "shape_type": "split_horizontal_half",
-      "shape_params": { "line_y": 0.5, "target_zone": "bottom" }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "line_y": 0.45,
+        "target_zone": "bottom",
+        "draw_style": "dashed",
+        "background_silhouette_type": "landmark_building_shape",
+        "foreground_silhouette_type": "multi_person_row_silhouette"
+      }
     }
   },
   {
@@ -267,10 +352,17 @@
     },
     "design_guide": {
       "shape_type": "oval",
-      "shape_params": { "center_x": 0.5, "center_y": 0.55, "width": 0.45, "height": 0.35 }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "center_x": 0.5,
+        "center_y": 0.55,
+        "width": 0.5,
+        "height": 0.4,
+        "draw_style": "dashed",
+        "silhouette_type": "grouped_people_silhouette"
+      }
     }
   },
-
   {
     "id": "food_single_dish",
     "initial_power": 980,
@@ -287,10 +379,17 @@
     },
     "design_guide": {
       "shape_type": "thirds_target",
-      "shape_params": { "focus_zone": "bottom_left" }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "focus_zone": "bottom_left",
+        "draw_style": "dashed",
+        "grid_visible": true,
+        "silhouette_type": "single_round_plate",
+        "center_x": 0.33,
+        "center_y": 0.65
+      }
     }
   },
-
   {
     "id": "activity_sports_action",
     "initial_power": 1150,
@@ -307,7 +406,14 @@
     },
     "design_guide": {
       "shape_type": "vertical_thirds",
-      "shape_params": { "line_index": 2 }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "line_index": 2,
+        "draw_style": "dashed",
+        "silhouette_type": "active_person_side_view",
+        "center_x": 0.66,
+        "center_y": 0.5
+      }
     }
   },
   {
@@ -326,7 +432,14 @@
     },
     "design_guide": {
       "shape_type": "target_circle",
-      "shape_params": { "center_x": 0.5, "center_y": 0.7, "radius": 0.18 }
+      "aspect_ratio": "4:3",
+      "shape_params": {
+        "center_x": 0.5,
+        "center_y": 0.68,
+        "radius": 0.18,
+        "draw_style": "dashed",
+        "silhouette_type": "focused_hands_and_tools"
+      }
     }
   }
 ]

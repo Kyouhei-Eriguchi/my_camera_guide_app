@@ -526,7 +526,7 @@
     "conditions": {
       "category": ["人物", "記念日"],
       "location": "indoor",
-      "bright": "bright",
+      "brightness": "bright",
       "orientation": "horizontal",
       "angle": "eye_level"
     },

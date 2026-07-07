@@ -78,6 +78,118 @@
     }
   },
   {
+    "id": "person_single_portrait",
+    "initial_power": 1600,
+    "purpose_what": "人物（1人・ポートレート）",
+    "purpose_how": "背景を綺麗にぼかして、モデルのような洗練された1人立ち姿を撮りたい！",
+    "title": "王道の1人ポートレート（縦位置・三分割）",
+    "message": "スマホを縦に構え、被写体の「目」の位置を上側の三分割交点に合わせます。背景をシンプルにするか、少し遠くを背景に選ぶと、人物が浮き立つように引き立ちます。",
+    "conditions": {
+      "category": ["人物"],
+      "location": "any",
+      "brightness": "bright",
+      "orientation": "vertical",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "aspect_ratio": "4:3",
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "single_person_silhouette",
+          "style": "dashed",
+          "description": "中央からやや左右にずらした位置に配置する1人の上半身〜膝上シルエット",
+          "head_center": { "x": 0.33, "y": 0.25 },
+          "head_radius": 0.08,
+          "body_bounds": { "left": 0.2, "top": 0.33, "right": 0.46, "bottom": 0.95 }
+        },
+        {
+          "type": "background_bokeh_zone",
+          "style": "dotted",
+          "description": "背景の抜け・ぼかしを意識させる右側の広範囲な余白領域",
+          "bounds": { "left": 0.5, "top": 0.1, "right": 0.95, "bottom": 0.9 }
+        }
+      ]
+    }
+  },
+  {
+    "id": "person_two_snapshot",
+    "initial_power": 1850,
+    "purpose_what": "人物（2人・デート・旅行スナップ）",
+    "purpose_how": "2人の仲の良さと、背景の観光スポット（タワーや建物など）をどちらも綺麗に収めたい！",
+    "title": "2人の距離感とランドマーク",
+    "message": "スマホを横向きに構え、2人には画面の片側に寄って少し寄り添ってもらいます。空いた反対側のスペースに背景のシンボルを収めることで、どこに行ったかが一目でわかるおしゃれな写真になります。",
+    "conditions": {
+      "category": ["人物", "旅行"],
+      "location": "outdoor",
+      "brightness": "any",
+      "orientation": "horizontal",
+      "angle": "eye_level"
+    },
+    "design_guide": {
+      "aspect_ratio": "4:3",
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "two_people_silhouette",
+          "style": "dashed",
+          "description": "右側に寄り添って並ぶ2人の上半身シルエット",
+          "person_left": { "head_center": { "x": 0.65, "y": 0.35 }, "body_left": 0.55, "body_right": 0.75 },
+          "person_right": { "head_center": { "x": 0.8, "y": 0.38 }, "body_left": 0.7, "body_right": 0.9 },
+          "bottom_y": 0.9
+        },
+        {
+          "type": "background_landmark_rect",
+          "style": "dashed",
+          "description": "左側の余白に収める背景の建物やシンボルタワーの配置枠",
+          "bounds": { "left": 0.1, "top": 0.15, "right": 0.45, "bottom": 0.8 }
+        }
+      ]
+    }
+  },
+  {
+    "id": "person_group_cafe",
+    "initial_power": 2150,
+    "purpose_what": "人物（3人以上・カフェ・屋内）",
+    "purpose_how": "テーブルを囲むみんなの笑顔と、おしゃれな店内の雰囲気をバランスよく残したい！",
+    "title": "にぎやかカフェタイム（3人以上の対角配置）",
+    "message": "少し斜めの位置からテーブルを挟み込むように構えて！手前、中央、奥へとリズミカルに配置されたガイドにそれぞれの顔が重なるように調整すると、奥行きと臨場感のある集合スナップになります。",
+    "conditions": {
+      "category": ["人物"],
+      "location": "indoor",
+      "brightness": "any",
+      "orientation": "horizontal",
+      "angle": "diagonal_45"
+    },
+    "design_guide": {
+      "aspect_ratio": "4:3",
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "table_perspective_lines",
+          "style": "dashed",
+          "description": "手前から奥へと広がるカフェテーブルのパース線",
+          "points": [
+            { "x": 0.0, "y": 0.85 },
+            { "x": 0.4, "y": 0.5 },
+            { "x": 0.9, "y": 0.5 },
+            { "x": 1.0, "y": 0.75 }
+          ]
+        },
+        {
+          "type": "group_faces_stepped",
+          "style": "dashed_circle",
+          "description": "手前・中央・奥に座る3人の顔の目安位置（サイズに遠近差を付与）",
+          "targets": [
+            { "id": "person_foreground", "center_x": 0.2, "center_y": 0.6, "radius": 0.08 },
+            { "id": "person_middle", "center_x": 0.5, "center_y": 0.4, "radius": 0.06 },
+            { "id": "person_background", "center_x": 0.75, "center_y": 0.35, "radius": 0.05 }
+          ]
+        }
+      ]
+    }
+  },
+  {
     "id": "food_shizuru_arrange",
     "initial_power": 85,
     "purpose_what": "料理（お肉・ハンバーグ・ラーメン等）",

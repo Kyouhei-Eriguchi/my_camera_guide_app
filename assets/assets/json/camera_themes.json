@@ -14,15 +14,39 @@
       "angle": "high_angle"
     },
     "design_guide": {
-      "shape_type": "circle",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "center_x": 0.5,
-        "center_y": 0.5,
-        "size_ratio": 0.7,
-        "draw_style": "dashed",
-        "silhouette_type": "zen_tray_contour"
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "tray_outline_rect",
+          "style": "dashed",
+          "description": "お膳・盆の全体外枠ガイド",
+          "points": [
+            { "x": 0.15, "y": 0.2 },
+            { "x": 0.85, "y": 0.2 },
+            { "x": 0.85, "y": 0.8 },
+            { "x": 0.15, "y": 0.8 }
+          ]
+        },
+        {
+          "type": "main_dish_circle",
+          "style": "dashed",
+          "description": "主菜（大皿）の配置枠",
+          "center_x": 0.5,
+          "center_y": 0.6,
+          "radius_x": 0.18,
+          "radius_y": 0.18
+        },
+        {
+          "type": "sub_dish_circle",
+          "style": "dashed",
+          "description": "ご飯・汁物の配置枠（左手前・右手前）",
+          "positions": [
+            { "center_x": 0.3, "center_y": 0.35, "radius": 0.1 },
+            { "center_x": 0.7, "center_y": 0.35, "radius": 0.1 }
+          ]
+        }
+      ]
     }
   },
   {
@@ -40,15 +64,17 @@
       "angle": "low_angle"
     },
     "design_guide": {
-      "shape_type": "center_cross",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "draw_style": "dashed",
-        "silhouette_type": "multi_person_sitting",
-        "silhouette_scale": 0.6,
-        "center_x": 0.5,
-        "center_y": 0.55
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "group_silhouette_peoples",
+          "style": "dashed",
+          "description": "お互いを見合う2〜3人の胸から上のシルエット",
+          "bounds": { "left": 0.2, "top": 0.3, "right": 0.8, "bottom": 0.9 },
+          "interaction_focus": { "x": 0.5, "y": 0.45 }
+        }
+      ]
     }
   },
   {
@@ -66,16 +92,27 @@
       "angle": "diagonal_45"
     },
     "design_guide": {
-      "shape_type": "thirds_target",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "focus_zone": "bottom_right",
-        "draw_style": "dashed",
-        "grid_visible": true,
-        "silhouette_type": "food_zoom_dish",
-        "center_x": 0.7,
-        "center_y": 0.65
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "zoom_dish_ellipse",
+          "style": "dashed",
+          "description": "右下に大胆に寄せるメインのお皿・器の輪郭破線",
+          "center_x": 0.66,
+          "center_y": 0.66,
+          "radius_x": 0.35,
+          "radius_y": 0.28
+        },
+        {
+          "type": "focus_target_spot",
+          "style": "solid_circle",
+          "description": "ピントを合わせる最前面のシズル肉・ハイライト位置",
+          "center_x": 0.66,
+          "center_y": 0.66,
+          "radius": 0.04
+        }
+      ]
     }
   },
   {
@@ -93,15 +130,28 @@
       "angle": "high_angle"
     },
     "design_guide": {
-      "shape_type": "square",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "center_x": 0.5,
-        "center_y": 0.5,
-        "size_ratio": 0.65,
-        "draw_style": "dashed",
-        "silhouette_type": "lunch_box_contour"
-      }
+      "grid_lines": { "visible": false },
+      "guide_shapes": [
+        {
+          "type": "lunch_box_outer_rect",
+          "style": "dashed",
+          "description": "長方形・正方形のお弁当箱の真上アウター枠線",
+          "points": [
+            { "x": 0.2, "y": 0.25 },
+            { "x": 0.8, "y": 0.25 },
+            { "x": 0.8, "y": 0.75 },
+            { "x": 0.2, "y": 0.75 }
+          ]
+        },
+        {
+          "type": "lunch_box_partition_line",
+          "style": "dashed",
+          "description": "ご飯とおかずを分ける一般的な仕切り目安線",
+          "start": { "x": 0.5, "y": 0.25 },
+          "end": { "x": 0.5, "y": 0.75 }
+        }
+      ]
     }
   },
   {
@@ -119,15 +169,30 @@
       "angle": "diagonal_45"
     },
     "design_guide": {
-      "shape_type": "diagonal_line",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "direction": "bottom_left_to_top_right",
-        "draw_style": "dashed",
-        "silhouette_type": "lunch_box_3d_angle",
-        "center_x": 0.5,
-        "center_y": 0.5
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "lunch_box_3d_perspective",
+          "style": "dashed",
+          "description": "斜め45度から見た立体的なお弁当箱のパース枠（手前が広く奥が狭い）",
+          "points": [
+            { "x": 0.15, "y": 0.75 },
+            { "x": 0.65, "y": 0.3 },
+            { "x": 0.9, "y": 0.45 },
+            { "x": 0.45, "y": 0.9 }
+          ]
+        },
+        {
+          "type": "hero_side_dish_zone",
+          "style": "dashed_circle",
+          "description": "一番魅せたいメインおかず（唐揚げや卵焼き）の特等席",
+          "center_x": 0.35,
+          "center_y": 0.7,
+          "radius_x": 0.12,
+          "radius_y": 0.09
+        }
+      ]
     }
   },
   {
@@ -145,15 +210,37 @@
       "angle": "diagonal_30"
     },
     "design_guide": {
-      "shape_type": "target_circle",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "center_x": 0.5,
-        "center_y": 0.6,
-        "radius": 0.2,
-        "draw_style": "dashed",
-        "silhouette_type": "whole_cake_with_candles"
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "cake_top_surface_ellipse",
+          "style": "dashed",
+          "description": "ホールケーキ上面の楕円ガイド（斜め俯瞰）",
+          "center_x": 0.5,
+          "center_y": 0.45,
+          "radius_x": 0.3,
+          "radius_y": 0.15
+        },
+        {
+          "type": "cake_base_ellipse",
+          "style": "dashed",
+          "description": "ホールケーキ底面（お皿）の楕円ガイド",
+          "center_x": 0.5,
+          "center_y": 0.65,
+          "radius_x": 0.32,
+          "radius_y": 0.16
+        },
+        {
+          "type": "birthday_plate_rect",
+          "style": "dashed",
+          "description": "チョコプレート（メッセージ）用の手前合わせ枠",
+          "center_x": 0.5,
+          "center_y": 0.52,
+          "width": 0.16,
+          "height": 0.06
+        }
+      ]
     }
   },
   {
@@ -171,14 +258,30 @@
       "angle": "eye_level"
     },
     "design_guide": {
-      "shape_type": "center_cross",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "draw_style": "dashed",
-        "silhouette_type": "cake_side_view_silhouette",
-        "center_x": 0.5,
-        "center_y": 0.6
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "cake_side_view_rect",
+          "style": "dashed",
+          "description": "真横から見たケーキの断層・立体四角形枠",
+          "points": [
+            { "x": 0.25, "y": 0.5 },
+            { "x": 0.75, "y": 0.5 },
+            { "x": 0.75, "y": 0.85 },
+            { "x": 0.25, "y": 0.85 }
+          ]
+        },
+        {
+          "type": "candle_flame_target",
+          "style": "dashed_ellipse",
+          "description": "メインキャンドルの炎を閉じ込める中央上部の点線ターゲット",
+          "center_x": 0.5,
+          "center_y": 0.33,
+          "radius_x": 0.05,
+          "radius_y": 0.07
+        }
+      ]
     }
   },
   {
@@ -196,13 +299,27 @@
       "angle": "eye_level"
     },
     "design_guide": {
-      "shape_type": "horizontal_thirds",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "line_index": 2,
-        "draw_style": "dashed",
-        "silhouette_type": "horizon_and_mountain_line"
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "horizon_guide_line",
+          "style": "bold_dashed_horizontal",
+          "description": "水平線・地平線を完全に一致させる下部三分割ライン（y=0.66）",
+          "y_position": 0.66
+        },
+        {
+          "type": "mountain_or_island_contour",
+          "style": "dashed",
+          "description": "背景を引き締める、遠景の山や島陰をハメ込む右奥の波線ガイド",
+          "points": [
+            { "x": 0.65, "y": 0.66 },
+            { "x": 0.75, "y": 0.6 },
+            { "x": 0.85, "y": 0.63 },
+            { "x": 0.95, "y": 0.66 }
+          ]
+        }
+      ]
     }
   },
   {
@@ -220,12 +337,28 @@
       "angle": "eye_level"
     },
     "design_guide": {
-      "shape_type": "vertical_center_line",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "draw_style": "dashed",
-        "silhouette_type": "vertical_waterfall_stream"
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "waterfall_vertical_stream_corridor",
+          "style": "dashed",
+          "description": "中央を流れる滝をハメ込むための縦の2本並行破線",
+          "left_x": 0.42,
+          "right_x": 0.58,
+          "top_y": 0.0,
+          "bottom_y": 1.0
+        },
+        {
+          "type": "waterfall_basin_curve",
+          "style": "dashed",
+          "description": "滝壺の水しぶきや岩肌を収める下部のウェーブ点線",
+          "center_x": 0.5,
+          "center_y": 0.85,
+          "radius_x": 0.25,
+          "radius_y": 0.08
+        }
+      ]
     }
   },
   {
@@ -243,14 +376,32 @@
       "angle": "eye_level"
     },
     "design_guide": {
-      "shape_type": "perspective_lines",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "vanishing_point_x": 0.5,
-        "vanishing_point_y": 0.45,
-        "draw_style": "dashed",
-        "silhouette_type": "shrine_torii_gate_contour"
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "shrine_torii_contour",
+          "style": "dashed",
+          "description": "最前面の主役となる大きな鳥居のシルエット点線",
+          "points": [
+            { "x": 0.15, "y": 0.9 },
+            { "x": 0.15, "y": 0.2 },
+            { "x": 0.85, "y": 0.2 },
+            { "x": 0.85, "y": 0.9 }
+          ],
+          "top_bar_y": 0.3
+        },
+        {
+          "type": "perspective_vanishing_lines",
+          "style": "dashed",
+          "description": "参道の両脇（灯籠や石畳）が中央奥へ収束する放射破線",
+          "vanishing_point": { "x": 0.5, "y": 0.45 },
+          "lines": [
+            { "start_x": 0.0, "start_y": 0.95 },
+            { "start_x": 1.0, "start_y": 0.95 }
+          ]
+        }
+      ]
     }
   },
   {
@@ -263,21 +414,30 @@
     "conditions": {
       "category": ["人物", "記念日"],
       "location": "indoor",
-      "brightness": "bright",
+      "bright": "bright",
       "orientation": "horizontal",
       "angle": "eye_level"
     },
     "design_guide": {
-      "shape_type": "thirds_target",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "focus_zone": "top_left",
-        "draw_style": "dashed",
-        "grid_visible": true,
-        "silhouette_type": "single_person_portrait",
-        "center_x": 0.33,
-        "center_y": 0.4
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "hero_portrait_silhouette",
+          "style": "dashed",
+          "description": "左上三分割交点（x=0.33, y=0.33）を中心とする主役の上半身シルエット人影",
+          "center_x": 0.33,
+          "center_y": 0.45,
+          "head_radius": 0.08,
+          "shoulder_width": 0.22
+        },
+        {
+          "type": "background_party_decoration_zone",
+          "style": "dashed",
+          "description": "右側の余白に盛り込む、背景のバルーンやガーランド用のアドバイス領域",
+          "bounds": { "left": 0.6, "top": 0.15, "right": 0.9, "bottom": 0.5 }
+        }
+      ]
     }
   },
   {
@@ -286,7 +446,7 @@
     "purpose_what": "記念写真（プレゼント・花束・アレンジ2）",
     "purpose_how": "もらった瞬間の嬉しそうな表情と、記念の品（花束やプレゼント）の双方をバッチリ残したい！",
     "title": "歓喜の瞬間（手前と奥の二刀流）",
-    "message": "スマホを少し傾け、手前の大きなガイド領域に「花束やプレゼント」を大きく写し、奥の小さめのガイドに「本人の最高の笑顔」が収まるように奥行きを作して。臨場感が爆発します！",
+    "message": "スマホを少し傾け、手前の大きなガイド領域に「花束やプレゼント」を大きく写し、奥の小さめのガイドに「本本人最高の笑顔」が収まるように奥行きを作って。臨場感が爆発します！",
     "conditions": {
       "category": ["人物", "記念日"],
       "location": "any",
@@ -295,19 +455,27 @@
       "angle": "diagonal_45"
     },
     "design_guide": {
-      "shape_type": "double_target",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "draw_style": "dashed",
-        "foreground_zone": "bottom_right",
-        "foreground_silhouette": "hand_holding_bouquet",
-        "background_zone": "top_left",
-        "background_silhouette": "person_happy_face",
-        "foreground_center_x": 0.7,
-        "foreground_center_y": 0.7,
-        "background_center_x": 0.3,
-        "background_center_y": 0.3
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "foreground_present_silhouette",
+          "style": "dashed",
+          "description": "手前の大迫力な花束・ギフトボックスの輪郭線",
+          "center_x": 0.7,
+          "center_y": 0.75,
+          "radius_x": 0.24,
+          "radius_y": 0.2
+        },
+        {
+          "type": "background_person_face_silhouette",
+          "style": "dashed",
+          "description": "奥で大喜びしている人物の顔シルエット（ピントがボケても形を合わせる）",
+          "center_x": 0.33,
+          "center_y": 0.3,
+          "head_radius": 0.09
+        }
+      ]
     }
   },
   {
@@ -325,15 +493,23 @@
       "angle": "eye_level"
     },
     "design_guide": {
-      "shape_type": "split_horizontal_half",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "line_y": 0.45,
-        "target_zone": "bottom",
-        "draw_style": "dashed",
-        "background_silhouette_type": "landmark_building_shape",
-        "foreground_silhouette_type": "multi_person_row_silhouette"
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "landmark_building_contour",
+          "style": "dashed",
+          "description": "画面上部中央を贅沢に使う、歴史的建物やタワーのランドマーク点線輪郭",
+          "bounds": { "left": 0.25, "top": 0.05, "right": 0.75, "bottom": 0.5 }
+        },
+        {
+          "type": "group_horizontal_row_silhouette",
+          "style": "dashed",
+          "description": "画面下半分（建物の入り口前等）に横一列に並ぶ複数人の人影ガイド",
+          "bounds": { "left": 0.1, "top": 0.55, "right": 0.9, "bottom": 0.9 },
+          "individual_head_count": 5
+        }
+      ]
     }
   },
   {
@@ -351,16 +527,24 @@
       "angle": "eye_level"
     },
     "design_guide": {
-      "shape_type": "oval",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "center_x": 0.5,
-        "center_y": 0.55,
-        "width": 0.5,
-        "height": 0.4,
-        "draw_style": "dashed",
-        "silhouette_type": "grouped_people_silhouette"
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "center_group_oval_capsule",
+          "style": "dashed",
+          "description": "全員が身を寄せてギュッと固まるための中央大型カプセル点線",
+          "center_x": 0.5,
+          "center_y": 0.55,
+          "width": 0.48,
+          "height": 0.38
+        },
+        {
+          "type": "scenery_surrounding_indicator",
+          "style": "arrow_hints",
+          "description": "フレーム外側の四隅（壮大な空、海、山並み）を開放するための余白インジケータ"
+        }
+      ]
     }
   },
   {
@@ -378,16 +562,26 @@
       "angle": "diagonal_45"
     },
     "design_guide": {
-      "shape_type": "thirds_target",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "focus_zone": "bottom_left",
-        "draw_style": "dashed",
-        "grid_visible": true,
-        "silhouette_type": "single_round_plate",
-        "center_x": 0.33,
-        "center_y": 0.65
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "single_plate_ellipse",
+          "style": "dashed",
+          "description": "左下三分割の交点（x=0.33, y=0.66）に完璧に一致させる丸皿のパース輪郭線",
+          "center_x": 0.33,
+          "center_y": 0.66,
+          "radius_x": 0.28,
+          "radius_y": 0.22
+        },
+        {
+          "type": "cutlery_diagonal_line",
+          "style": "dashed",
+          "description": "お皿の脇に添えるスプーンやフォークの配置目安点線",
+          "start": { "x": 0.05, "y": 0.8 },
+          "end": { "x": 0.2, "y": 0.5 }
+        }
+      ]
     }
   },
   {
@@ -405,15 +599,25 @@
       "angle": "eye_level"
     },
     "design_guide": {
-      "shape_type": "vertical_thirds",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "line_index": 2,
-        "draw_style": "dashed",
-        "silhouette_type": "active_person_side_view",
-        "center_x": 0.66,
-        "center_y": 0.5
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "action_person_side_silhouette",
+          "style": "dashed",
+          "description": "画面の右側3分の1（x=0.66）のラインに背中を合わせ、左向きに動く人物人影",
+          "center_x": 0.68,
+          "center_y": 0.5,
+          "bounds": { "left": 0.55, "top": 0.2, "right": 0.85, "bottom": 0.85 }
+        },
+        {
+          "type": "movement_vector_space",
+          "style": "arrow_dashed",
+          "description": "左側の3分2を大胆に開放し、躍動・進行方向を惹き立てる空間インジケータ",
+          "from": { "x": 0.5, "y": 0.5 },
+          "to": { "x": 0.1, "y": 0.5 }
+        }
+      ]
     }
   },
   {
@@ -431,15 +635,27 @@
       "angle": "low_angle"
     },
     "design_guide": {
-      "shape_type": "target_circle",
       "aspect_ratio": "4:3",
-      "shape_params": {
-        "center_x": 0.5,
-        "center_y": 0.68,
-        "radius": 0.18,
-        "draw_style": "dashed",
-        "silhouette_type": "focused_hands_and_tools"
-      }
+      "grid_lines": { "visible": true, "style": "dashed" },
+      "guide_shapes": [
+        {
+          "type": "craft_hand_and_tools_silhouette",
+          "style": "dashed",
+          "description": "下部中央（x=0.5, y=0.7）に最も精緻に描画する、物作りの両手・道具の手元シルエット",
+          "center_x": 0.5,
+          "center_y": 0.72,
+          "radius_x": 0.22,
+          "radius_y": 0.16
+        },
+        {
+          "type": "worker_face_upper_zone",
+          "style": "dashed",
+          "description": "ローアングルから見上げる、集中した職人の顔・上半身のうつむき輪郭（上部背景）",
+          "center_x": 0.5,
+          "center_y": 0.35,
+          "head_radius": 0.07
+        }
+      ]
     }
   }
 ]

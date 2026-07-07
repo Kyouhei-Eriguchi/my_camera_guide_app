@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 
 class GuidePainter extends CustomPainter {
-  // 新しいマスターJSON構造（Mapオブジェクト全体）を受け取る
+  // JSONの「design_guide」またはガイドオブジェクト全体のMapを受け取る
   final Map<String, dynamic> designGuide;
   final bool isHorizontal;
 
@@ -20,110 +20,180 @@ class GuidePainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     try {
-      // 2. 基本仕様：三分割グリッドをうっすら背景に必ず描画（show_gridフラグがfalseでなければ描く）
-      if (designGuide['show_grid'] != false) {
+      // 階層のズレ対策（"design_guide" の中にデータがある場合と、直下にある場合の両方に対応）
+      final Map<String, dynamic> guideData = designGuide.containsKey('design_guide') 
+          ? Map<String, dynamic>.from(designGuide['design_guide']) 
+          : designGuide;
+
+      // 2. 基本仕様：三分割グリッドを表示（JSONで明示的にfalseでない限りうっすら表示）
+      final gridLines = guideData['grid_lines'];
+      if (gridLines == null || (gridLines is Map && gridLines['visible'] != false)) {
         final gridPaint = Paint()
-          ..color = Colors.white.withOpacity(0.15)
-          ..strokeWidth = paint.strokeWidth
+          ..color = Colors.white.withOpacity(0.12)
+          ..strokeWidth = 1.5
           ..style = paint.style;
         _drawThirdsGrid(canvas, size, gridPaint);
       }
 
-      // 3. 新JSON構造の「guide_shapes」（お弁当箱の四角枠、ケーキの楕円など）のループ描画
-      if (designGuide['guide_shapes'] != null && designGuide['guide_shapes'] is List) {
-        final List<dynamic> shapes = designGuide['guide_shapes'];
+      // 3. 🌟 JSONの「guide_shapes」配列をリッチに解析・描画
+      if (guideData['guide_shapes'] != null && guideData['guide_shapes'] is List) {
+        final List<dynamic> shapes = guideData['guide_shapes'];
+        
         for (var shape in shapes) {
           if (shape is! Map) continue;
-
           final String type = shape['type']?.toString() ?? '';
-          
-          final double cx = (shape['center_x'] is num) ? (shape['center_x'] as num).toDouble() * size.width : size.width * 0.5;
-          final double cy = (shape['center_y'] is num) ? (shape['center_y'] as num).toDouble() * size.height : size.height * 0.5;
-          final double w = (shape['width'] is num) ? (shape['width'] as num).toDouble() * size.width : size.width * 0.4;
-          final double h = (shape['height'] is num) ? (shape['height'] as num).toDouble() * size.height : size.height * 0.4;
-          final double customStrokeWidth = (shape['stroke_width'] is num) ? (shape['stroke_width'] as num).toDouble() : paint.strokeWidth;
 
+          // 共通ペイント設定の生成
+          final double customStrokeWidth = (shape['stroke_width'] is num) 
+              ? (shape['stroke_width'] as num).toDouble() 
+              : paint.strokeWidth;
+              
           final shapePaint = Paint()
             ..color = paint.color
             ..strokeWidth = customStrokeWidth
             ..style = paint.style;
 
-          if (type == 'rect' || type == 'rrect') {
-            final rect = Rect.fromCenter(center: Offset(cx, cy), width: w, height: h);
-            if (type == 'rrect') {
-              final double radius = (shape['corner_radius'] is num) ? (shape['corner_radius'] as num).toDouble() : 12.0;
-              _drawDashedRRect(canvas, RRect.fromRectAndRadius(rect, Radius.circular(radius)), shapePaint);
-            } else {
-              _drawDashedRect(canvas, rect, shapePaint);
-            }
-          } else if (type == 'circle' || type == 'ellipse') {
-            final rect = Rect.fromCenter(center: Offset(cx, cy), width: w, height: h);
-            _drawDashedArc(canvas, rect, 0, 2 * 3.14159265, shapePaint);
+          // --- A. 円・楕円形 (circle / ellipse / spot / capsule などに追従) ---
+          if (type.contains('circle') || type.contains('ellipse') || type.contains('spot') || type.contains('oval')) {
             
-            if (shape['draw_center_target'] == true) {
-              canvas.drawCircle(Offset(cx, cy), 15, shapePaint);
+            // 複数ポジション（ご飯・汁物など）の配列データがある場合
+            if (shape['positions'] != null && shape['positions'] is List) {
+              final List<dynamic> positions = shape['positions'];
+              for (var pos in positions) {
+                if (pos is! Map) continue;
+                final double cx = ((pos['center_x'] ?? 0.5) as num).toDouble() * size.width;
+                final double cy = ((pos['center_y'] ?? 0.5) as num).toDouble() * size.height;
+                final double r = ((pos['radius'] ?? 0.1) as num).toDouble() * (size.width < size.height ? size.width : size.height);
+                _drawDashedCircle(canvas, Offset(cx, cy), r, shapePaint);
+              }
+            } else {
+              // 単一の円・楕円形データのパース
+              final double cx = ((shape['center_x'] ?? 0.5) as num).toDouble() * size.width;
+              final double cy = ((shape['center_y'] ?? 0.5) as num).toDouble() * size.height;
+              
+              // radius_x/y、radius、width/height のどの表記でも安全に取得する
+              double rx = 0.0;
+              double ry = 0.0;
+              if (shape['radius_x'] is num) {
+                rx = (shape['radius_x'] as num).toDouble() * size.width;
+                ry = (shape['radius_y'] is num) ? (shape['radius_y'] as num).toDouble() * size.height : rx;
+              } else if (shape['radius'] is num) {
+                rx = (shape['radius'] as num).toDouble() * (size.width < size.height ? size.width : size.height);
+                ry = rx;
+              } else {
+                rx = ((shape['width'] ?? 0.4) as num).toDouble() * size.width / 2;
+                ry = ((shape['height'] ?? 0.4) as num).toDouble() * size.height / 2;
+              }
+
+              final rect = Rect.fromCenter(center: Offset(cx, cy), width: rx * 2, height: ry * 2);
+              _drawDashedArc(canvas, rect, 0, 2 * 3.14159265, shapePaint);
+
+              // 固体の真円ターゲット（focus_target_spotなど）は点線ではなく実線で描く
+              if (shape['style'] == 'solid_circle') {
+                final solidPaint = Paint()
+                  ..color = paint.color
+                  ..strokeWidth = shapePaint.strokeWidth
+                  ..style = PaintingStyle.stroke;
+                canvas.drawCircle(Offset(cx, cy), rx, solidPaint);
+              }
+            }
+          }
+
+          // --- B. 多角形・長方形・パース線 (points配列を順に結ぶ) ---
+          else if (shape['points'] != null && shape['points'] is List) {
+            final List<dynamic> pointsData = shape['points'];
+            if (pointsData.length >= 2) {
+              final List<Offset> offsets = pointsData.map((p) {
+                final double px = ((p['x'] ?? 0.0) as num).toDouble() * size.width;
+                final double py = ((p['y'] ?? 0.0) as num).toDouble() * size.height;
+                return Offset(px, py);
+              }).toList();
+
+              // 点線を繋げて多角形を描画（お膳外枠、お弁当箱立体、鳥居など）
+              for (int i = 0; i < offsets.length; i++) {
+                final Offset startPt = offsets[i];
+                // 最後の点なら最初の点に繋ぐ（閉じられた多角形）、それ以外は次の点へ
+                final Offset endPt = (i == offsets.length - 1) ? offsets[0] : offsets[i + 1];
+                _drawDashedLine(canvas, startPt, endPt, shapePaint);
+              }
+            }
+          }
+
+          // --- C. 直線データ (start / end のペア) ---
+          else if (shape['start'] != null && shape['end'] != null) {
+            final Map<dynamic, dynamic> st = shape['start'] is Map ? shape['start'] : {};
+            final Map<dynamic, dynamic> ed = shape['end'] is Map ? shape['end'] : {};
+            
+            final double x1 = ((st['x'] ?? 0.0) as num).toDouble() * size.width;
+            final double y1 = ((st['y'] ?? 0.0) as num).toDouble() * size.height;
+            final double x2 = ((ed['x'] ?? 0.0) as num).toDouble() * size.width;
+            final double y2 = ((ed['y'] ?? 0.0) as num).toDouble() * size.height;
+
+            _drawDashedLine(canvas, Offset(x1, y1), Offset(x2, y2), shapePaint);
+          }
+
+          // --- D. 単一の水平ガイド線 (y_position指定) ---
+          else if (shape['y_position'] is num) {
+            final double y = (shape['y_position'] as num).toDouble() * size.height;
+            _drawDashedLine(canvas, Offset(0, y), Offset(size.width, y), shapePaint);
+          }
+
+          // --- E. 滝の平行線などの特別な平行ライン (left_x / right_x 指定) ---
+          else if (shape['left_x'] is num && shape['right_x'] is num) {
+            final double lx = (shape['left_x'] as num).toDouble() * size.width;
+            final double rx = (shape['right_x'] as num).toDouble() * size.width;
+            final double topY = ((shape['top_y'] ?? 0.0) as num).toDouble() * size.height;
+            final double botY = ((shape['bottom_y'] ?? 1.0) as num).toDouble() * size.height;
+
+            _drawDashedLine(canvas, Offset(lx, topY), Offset(lx, botY), shapePaint);
+            _drawDashedLine(canvas, Offset(rx, topY), Offset(rx, botY), shapePaint);
+          }
+
+          // --- F. 神社などの放射パース収束線 (vanishing_point指定) ---
+          else if (shape['vanishing_point'] != null && shape['lines'] != null && shape['lines'] is List) {
+            final Map<dynamic, dynamic> vp = shape['vanishing_point'] is Map ? shape['vanishing_point'] : {};
+            final double vpx = ((vp['x'] ?? 0.5) as num).toDouble() * size.width;
+            final double vpy = ((vp['y'] ?? 0.5) as num).toDouble() * size.height;
+            
+            final List<dynamic> vLines = shape['lines'];
+            for (var vLine in vLines) {
+              if (vLine is! Map) continue;
+              final double sx = ((vLine['start_x'] ?? 0.0) as num).toDouble() * size.width;
+              final double sy = ((vLine['start_y'] ?? 0.0) as num).toDouble() * size.height;
+              _drawDashedLine(canvas, Offset(sx, sy), Offset(vpx, vpy), shapePaint);
+            }
+          }
+
+          // --- G. 境界四角形 (bounds指定: 人影シルエットやランドマークなど) ---
+          else if (shape['bounds'] != null && shape['bounds'] is Map) {
+            final Map<dynamic, dynamic> bounds = shape['bounds'];
+            final double left = ((bounds['left'] ?? 0.0) as num).toDouble() * size.width;
+            final double top = ((bounds['top'] ?? 0.0) as num).toDouble() * size.height;
+            final double right = ((bounds['right'] ?? 1.0) as num).toDouble() * size.width;
+            final double bottom = ((bounds['bottom'] ?? 1.0) as num).toDouble() * size.height;
+
+            final rect = Rect.fromLTRB(left, top, right, bottom);
+            _drawDashedRect(canvas, rect, shapePaint);
+
+            // もし「人物の頭（head_radius）」などの詳細パラメタがあれば追加描画
+            if (shape['head_radius'] is num) {
+              final double cx = ((shape['center_x'] ?? 0.5) as num).toDouble() * size.width;
+              final double cy = ((shape['center_y'] ?? 0.5) as num).toDouble() * size.height;
+              final double hr = (shape['head_radius'] as num).toDouble() * (size.width < size.height ? size.width : size.height);
+              _drawDashedCircle(canvas, Offset(cx, cy), hr, shapePaint);
             }
           }
         }
       }
-
-      // 4. 新JSON構造の「guide_lines」（参道のパース線、アングル斜め線、フォークなど）のループ描画
-      if (designGuide['guide_lines'] != null && designGuide['guide_lines'] is List) {
-        final List<dynamic> lines = designGuide['guide_lines'];
-        for (var line in lines) {
-          if (line is! Map) continue;
-
-          final double x1 = (line['start_x'] is num) ? (line['start_x'] as num).toDouble() * size.width : 0.0;
-          final double y1 = (line['start_y'] is num) ? (line['start_y'] as num).toDouble() * size.height : 0.0;
-          final double x2 = (line['end_x'] is num) ? (line['end_x'] as num).toDouble() * size.width : size.width;
-          final double y2 = (line['end_y'] is num) ? (line['end_y'] as num).toDouble() * size.height : size.height;
-          final double customStrokeWidth = (line['stroke_width'] is num) ? (line['stroke_width'] as num).toDouble() : paint.strokeWidth;
-
-          final linePaint = Paint()
-            ..color = paint.color
-            ..strokeWidth = customStrokeWidth
-            ..style = paint.style;
-
-          _drawDashedLine(canvas, Offset(x1, y1), Offset(x2, y2), linePaint);
-        }
-      }
-
-      // 5. 後方互換性：もし古いJSON（shape_typeが直接指定されているもの）が来ても動くようにフォールバック処理
-      final String legacyShapeType = designGuide['shape_type']?.toString() ?? '';
-      if (legacyShapeType.isNotEmpty) {
-        final Map<dynamic, dynamic> legacyParams = designGuide['shape_params'] is Map ? designGuide['shape_params'] : {};
-        
-        if (legacyShapeType == 'circle') {
-          final double ratio = (legacyParams['size_ratio'] is num) ? (legacyParams['size_ratio'] as num).toDouble() : 0.6;
-          final double radius = (size.width < size.height ? size.width : size.height) * ratio / 2;
-          final center = Offset(size.width / 2, size.height / 2);
-          _drawDashedCircle(canvas, center, radius, paint);
-        } else if (legacyShapeType == 'center_cross') {
-          final centerX = size.width / 2;
-          final centerY = size.height * 0.55;
-          _drawDashedCircle(canvas, Offset(centerX - 50, centerY - 40), 35, paint);
-          _drawDashedArc(canvas, Rect.fromCenter(center: Offset(centerX - 50, centerY + 30), width: 100, height: 60), 3.14, 3.14, paint);
-          _drawDashedCircle(canvas, Offset(centerX + 50, centerY - 30), 35, paint);
-          _drawDashedArc(canvas, Rect.fromCenter(center: Offset(centerX + 50, centerY + 40), width: 100, height: 60), 3.14, 3.14, paint);
-        } else if (legacyShapeType == 'thirds_target') {
-          final targetX = size.width * 0.7;
-          final targetY = size.height * 0.65;
-          final dishRect = Rect.fromCenter(center: Offset(targetX, targetY), width: size.width * 0.6, height: size.width * 0.4);
-          _drawDashedArc(canvas, dishRect, 0, 2 * 3.1415, paint);
-          canvas.drawCircle(Offset(targetX, targetY), 20, paint);
-          _drawDashedLine(canvas, Offset(size.width * 0.2, size.height * 0.3), Offset(targetX - 40, targetY - 20), paint);
-        }
-      }
     } catch (e, stacktrace) {
-      debugPrint('GuidePainterエラー回避ロジック発動: $e');
+      debugPrint('GuidePainter JSONデコード・描画エラー回避: $e');
       debugPrint('スタックトレース: $stacktrace');
       
-      // 🌟 paint.copyWith を修正：新しく Paint を生成して色をオーバーライド（125行目の修正）
+      // 万が一のエラー時は、薄い三分割線だけを絶対に表示してUXを担保する
       final errorGridPaint = Paint()
-        ..color = Colors.white.withOpacity(0.2)
+        ..color = Colors.white.withOpacity(0.15)
         ..strokeWidth = paint.strokeWidth
         ..style = paint.style;
-      
       _drawThirdsGrid(canvas, size, errorGridPaint);
     }
   }
@@ -131,10 +201,12 @@ class GuidePainter extends CustomPainter {
   // --- なぞり線を表現するためのカスタム描画関数 ---
 
   void _drawDashedCircle(Canvas canvas, Offset center, double radius, Paint paint) {
-    _drawDashedArc(canvas, Rect.fromCircle(center: center, radius: radius), 0, 2 * 3.1415, paint);
+    if (radius <= 0) return;
+    _drawDashedArc(canvas, Rect.fromCircle(center: center, radius: radius), 0, 2 * 3.14159265, paint);
   }
 
   void _drawDashedArc(Canvas canvas, Rect rect, double startAngle, double sweepAngle, Paint paint) {
+    if (rect.width <= 0 || rect.height <= 0) return;
     const int dashCount = 40;
     final double dashAngle = sweepAngle / dashCount;
     for (int i = 0; i < dashCount; i += 2) {
@@ -143,32 +215,11 @@ class GuidePainter extends CustomPainter {
   }
 
   void _drawDashedRect(Canvas canvas, Rect rect, Paint paint) {
+    if (rect.width <= 0 || rect.height <= 0) return;
     _drawDashedLine(canvas, rect.topLeft, rect.topRight, paint);
     _drawDashedLine(canvas, rect.topRight, rect.bottomRight, paint);
     _drawDashedLine(canvas, rect.bottomRight, rect.bottomLeft, paint);
-    _drawDashedLeft(canvas, rect.bottomLeft, rect.topLeft, paint);
-  }
-
-  void _drawDashedLeft(Canvas canvas, Offset p1, Offset p2, Paint paint) {
-    _drawDashedLine(canvas, p1, p2, paint);
-  }
-
-  void _drawDashedRRect(Canvas canvas, RRect rrect, Paint paint) {
-    final Path path = Path()..addRRect(rrect);
-    final PathMetrics metrics = path.computeMetrics();
-    const double dashWidth = 10.0;
-    const double dashSpace = 8.0;
-
-    for (final PathMetric metric in metrics) {
-      double distance = 0.0;
-      while (distance < metric.length) {
-        final double remaining = metric.length - distance;
-        final double len = remaining < dashWidth ? remaining : dashWidth;
-        final Path extract = metric.extractPath(distance, distance + len);
-        canvas.drawPath(extract, paint);
-        distance += dashWidth + dashSpace;
-      }
-    }
+    _drawDashedLine(canvas, rect.bottomLeft, rect.topLeft, paint);
   }
 
   void _drawDashedLine(Canvas canvas, Offset p1, Offset p2, Paint paint) {
@@ -179,9 +230,10 @@ class GuidePainter extends CustomPainter {
     final double dy = p2.dy - p1.dy;
     final double distance = Offset(dx, dy).distance;
     
-    if (distance == 0) return;
+    if (distance == 0 || distance.isNaN) return;
 
     final int dashCount = (distance / (dashWidth + dashSpace)).floor();
+    if (dashCount <= 0) return;
     
     final double xStep = dx / distance;
     final double yStep = dy / distance;

@@ -240,7 +240,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
               ),
 
-              // 【2】 🌟 新しいマスターJSONの全パラメータ構造を完全に渡すガイドレイヤー 🌟
+              // 【2】 🌟 【重要修正】設計データ（複合形状・ライン等）を丸ごと引き渡す構造に変更 🌟
               // 4:3に固定された上のCameraPreviewと完全に同じ枠に重なるように配置
               Positioned.fill(
                 child: Center(
@@ -249,11 +249,10 @@ class _CameraScreenState extends State<CameraScreen> {
                     child: IgnorePointer(
                       child: CustomPaint(
                         painter: GuidePainter(
-                          // 新しい設計データ（お弁当枠、三分割破線、形状params一式）をそのまま引き渡す
-                          shapeType: widget.theme.designGuide['shape_type'] ?? 'default',
-                          shapeParams: widget.theme.designGuide['shape_params'] ?? {},
+                          // 🔴 旧構造の単一キー指定（shapeType / shapeParams）を廃止し、
+                          // お弁当箱、ケーキ、参道等の全形状・ライン線が含まれた最新JSON（Mapオブジェクト）を丸ごと注入
+                          designGuide: widget.theme.designGuide,
                           isHorizontal: isCurrentlyLandscape,
-                          // 必要に応じて設計データ一式（design_guideオブジェクト全体）をそのまま渡せるように拡張可能に
                         ),
                       ),
                     ),
